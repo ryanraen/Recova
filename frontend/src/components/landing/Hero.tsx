@@ -3,6 +3,7 @@ import { Star, Play, Check, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TiltableCard from "@/components/ui/TiltableCard";
 import ShinyText from "@/components/ui/ShinyText";
+import CountUp from "@/components/ui/CountUp";
 import meditationLandingImg from "@/assets/meditation_landing.png";
 
 const Hero = () => {
@@ -129,6 +130,14 @@ const Hero = () => {
               </div>
               Platform Demo
             </Button>
+          </div>
+
+          {/* Reviews counter */}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+            <span className="text-base">
+              Over <CountUp to={100} duration={2.5} className="font-bold text-foreground" /> positive reviews
+            </span>
           </div>
         </div>
 
