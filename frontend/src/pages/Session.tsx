@@ -21,7 +21,6 @@ import {
 import {
   Leaf,
   LogOut,
-  Send,
   Check,
   ChevronRight,
   TrendingUp,
@@ -640,19 +639,6 @@ const InterviewPhase = ({
           )}
         </div>
 
-        <div className="p-3 md:p-4 border-t border-border">
-          <div className="flex items-center gap-2 bg-muted rounded-full px-4 py-2 border border-border">
-            <input
-              type="text"
-              placeholder="Type your answer..."
-              className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
-              readOnly
-            />
-            <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md">
-              <Send className="w-4 h-4 text-primary-foreground" />
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -674,6 +660,7 @@ const MovementPhase = ({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [successPopup, setSuccessPopup] = useState<string | null>(null);
+  const [successPopupFading, setSuccessPopupFading] = useState(false);
   const [isRoutineComplete, setIsRoutineComplete] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -685,7 +672,8 @@ const MovementPhase = ({
   const lastAdviceAtRef = useRef(0);
   const lastTransitionAtRef = useRef(0);
   const lastExerciseAnnouncedRef = useRef<number | null>(null);
-  const successPopupTimerRef = useRef<number | null>(null);
+  const successPopupHoldTimerRef = useRef<number | null>(null);
+  const successPopupFadeTimerRef = useRef<number | null>(null);
   const exerciseSnapshotsRef = useRef<Map<ExerciseType, MovementExerciseSnapshot>>(
     new Map(),
   );
@@ -693,16 +681,52 @@ const MovementPhase = ({
   const currentExercise = MOVEMENT_EXERCISES[exerciseIndex];
   const currentExerciseLabel = EXERCISE_LABELS[currentExercise];
 
-  const showSuccessPopup = (message: string, durationMs = 2800) => {
+  const showSuccessPopup = (
+    message: string,
+    holdMs = 1800,
+    fadeMs = 900,
+  ) => {
     setSuccessPopup(message);
-    if (successPopupTimerRef.current !== null) {
-      window.clearTimeout(successPopupTimerRef.current);
+    setSuccessPopupFading(false);
+
+    if (successPopupHoldTimerRef.current !== null) {
+      window.clearTimeout(successPopupHoldTimerRef.current);
+      successPopupHoldTimerRef.current = null;
     }
-    successPopupTimerRef.current = window.setTimeout(() => {
-      setSuccessPopup(null);
-      successPopupTimerRef.current = null;
-    }, durationMs);
+    if (successPopupFadeTimerRef.current !== null) {
+      window.clearTimeout(successPopupFadeTimerRef.current);
+      successPopupFadeTimerRef.current = null;
+    }
+
+    successPopupHoldTimerRef.current = window.setTimeout(() => {
+      setSuccessPopupFading(true);
+      successPopupFadeTimerRef.current = window.setTimeout(() => {
+        setSuccessPopup(null);
+        setSuccessPopupFading(false);
+        successPopupFadeTimerRef.current = null;
+      }, fadeMs);
+      successPopupHoldTimerRef.current = null;
+    }, holdMs);
   };
+
+  const clearSuccessPopup = () => {
+    if (successPopupHoldTimerRef.current !== null) {
+      window.clearTimeout(successPopupHoldTimerRef.current);
+      successPopupHoldTimerRef.current = null;
+    }
+    if (successPopupFadeTimerRef.current !== null) {
+      window.clearTimeout(successPopupFadeTimerRef.current);
+      successPopupFadeTimerRef.current = null;
+    }
+    setSuccessPopupFading(false);
+    setSuccessPopup(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearSuccessPopup();
+    };
+  }, []);
 
   const posture = usePostureMonitor({
     config: {
@@ -725,15 +749,6 @@ const MovementPhase = ({
     resizeOverlay();
     window.addEventListener("resize", resizeOverlay);
     return () => window.removeEventListener("resize", resizeOverlay);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (successPopupTimerRef.current !== null) {
-        window.clearTimeout(successPopupTimerRef.current);
-        successPopupTimerRef.current = null;
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -795,7 +810,6 @@ const MovementPhase = ({
     if (!vapi.isActive || isRoutineComplete) return;
     if (lastExerciseAnnouncedRef.current === exerciseIndex) return;
 
-    setSuccessPopup(null);
     const total = MOVEMENT_EXERCISES.length;
     vapi.speak(
       `Exercise ${exerciseIndex + 1} of ${total}: ${currentExerciseLabel}. Hold steady and follow the on-screen guidance.`,
@@ -991,7 +1005,13 @@ const MovementPhase = ({
             {popupMessage && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2">
                 <div
-                  className={`rounded-full border px-4 py-2 text-xs md:text-sm font-semibold shadow-lg whitespace-nowrap max-w-[90vw] truncate ${popupToneClass}`}
+                  className={`rounded-full border px-4 py-2 text-xs md:text-sm font-semibold shadow-lg whitespace-nowrap max-w-[90vw] truncate transition-opacity duration-900 ${popupToneClass} ${
+                    outOfFrameIssue
+                      ? "opacity-100"
+                      : successPopupFading
+                        ? "opacity-0"
+                        : "opacity-100"
+                  }`}
                   title={popupMessage}
                 >
                   {popupMessage}
