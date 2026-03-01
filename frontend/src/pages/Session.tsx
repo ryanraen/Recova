@@ -1,6 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { fromMediaPipePose } from "@/posture/integration/mediapipeAdapter";
+import { usePostureMonitor } from "@/posture/react/usePostureMonitor";
+import {
+  clearPoseOverlay,
+  drawPoseOverlay,
+  smoothPose,
+} from "@/posture/demo/poseOverlay";
+import {
+  extractFirstPose,
+  getPoseLandmarker,
+  type NormalizedLandmark,
+} from "@/posture/demo/poseLandmarker";
 import {
   Leaf,
   LogOut,
@@ -33,13 +45,6 @@ const chatMessages = [
   },
 ];
 
-const scoreBreakdown = [
-  { label: "Back Alignment", value: 92, status: "good" },
-  { label: "Hip Position", value: 78, status: "moderate" },
-  { label: "Shoulder Stability", value: 85, status: "good" },
-  { label: "Core Engagement", value: 70, status: "moderate" },
-];
-
 const strengths = [
   "Excellent back alignment maintained throughout",
   "Steady breathing pattern observed",
@@ -52,6 +57,12 @@ const improvements = [
   "Core engagement could be more consistent",
   "Consider widening hand placement slightly",
 ];
+
+type ScoreItem = {
+  label: string;
+  value: number;
+  status: "good" | "moderate";
+};
 
 const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
@@ -152,205 +163,606 @@ const PhaseIndicator = ({ current }: { current: Phase }) => (
   </div>
 );
 
-const CameraPlaceholder = ({ label }: { label: string }) => (
-  <div className="bg-foreground/95 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden aspect-video shadow-xl">
-    <div className="absolute inset-6 md:inset-8 border border-muted-foreground/30 rounded-lg" />
-    <div className="w-3 h-3 rounded-full bg-muted-foreground/40 mb-4" />
-    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 py-3 bg-foreground/80 backdrop-blur-sm">
-      <div className="w-2 h-2 rounded-full bg-terracotta animate-pulse" />
-      <span className="text-xs text-muted-foreground font-medium">REC</span>
-      <span className="text-xs text-muted-foreground mx-1">|</span>
-      <span className="text-xs text-muted-foreground font-medium">
-        Mediapipe Active
-      </span>
-    </div>
-    <p className="absolute bottom-16 text-center text-sm text-primary-foreground font-bold">
-      {label}
-    </p>
-    <p className="absolute bottom-12 text-center text-xs text-muted-foreground">
-      Ensure your whole body is visible in the frame.
-    </p>
-  </div>
-);
+const InterviewPhase = () => {
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
-const InterviewPhase = () => (
-  <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
-    {/* Left: Phase indicator - hidden on mobile, shown as top bar */}
-    <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
-      <PhaseIndicator current="interview" />
-    </div>
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const smoothedPoseRef = useRef<NormalizedLandmark[] | null>(null);
 
-    {/* Mobile phase pills */}
-    <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
-      {phases.map((phase, i) => {
-        const isActive = phase.id === "interview";
-        return (
-          <span
-            key={phase.id}
-            className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-          >
-            {i + 1}. {phase.sublabel}
-          </span>
+  const posture = usePostureMonitor({
+    config: {
+      exercise: "plank",
+      smoothingAlpha: 0.6,
+      visibilityThreshold: 0.35,
+      scoreFloor: 0,
+    },
+  });
+
+  useEffect(() => {
+    const resizeOverlay = () => {
+      const canvas = overlayRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width));
+      canvas.height = Math.max(1, Math.round(rect.height));
+    };
+
+    resizeOverlay();
+    window.addEventListener("resize", resizeOverlay);
+    return () => window.removeEventListener("resize", resizeOverlay);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function setupCamera() {
+      setCameraError(null);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
+            aspectRatio: { ideal: 9 / 16 },
+            facingMode: "user",
+          },
+          audio: false,
+        });
+
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+        setCameraReady(true);
+      } catch (error) {
+        setCameraReady(false);
+        setCameraError(
+          error instanceof Error
+            ? error.message
+            : "Failed to access camera. Check browser permissions.",
         );
-      })}
-    </div>
+      }
+    }
 
-    {/* Center: Camera */}
-    <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center">
-      <div className="w-full max-w-2xl">
-        <CameraPlaceholder label="Let's check your setup" />
+    setupCamera();
+
+    return () => {
+      isMounted = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      smoothedPoseRef.current = null;
+      if (overlayRef.current) clearPoseOverlay(overlayRef.current);
+      setCameraReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cameraReady) return;
+
+    let cancelled = false;
+
+    async function startDetection() {
+      const detector = await getPoseLandmarker();
+      if (cancelled) return;
+
+      const tick = () => {
+        const video = videoRef.current;
+        const overlay = overlayRef.current;
+
+        if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const detection = detector.detectForVideo(video, performance.now());
+        const pose = extractFirstPose(detection);
+
+        if (pose && overlay) {
+          const smoothed = smoothPose(smoothedPoseRef.current, pose, 0.72);
+          smoothedPoseRef.current = smoothed;
+          drawPoseOverlay(
+            overlay,
+            smoothed,
+            video.videoWidth || 1,
+            video.videoHeight || 1,
+          );
+          posture.processFrame(Date.now(), fromMediaPipePose(smoothed));
+        } else if (overlay) {
+          smoothedPoseRef.current = null;
+          clearPoseOverlay(overlay);
+        }
+
+        rafRef.current = requestAnimationFrame(tick);
+      };
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    startDetection().catch((error) => {
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Failed to initialize pose detector.",
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [cameraReady, posture.processFrame]);
+
+  const issues = posture.latestResult?.issues ?? [];
+  const poseDetected = Boolean(posture.latestResult);
+  const inFrame = !issues.some((issue) => issue.id === "low-visibility" || issue.id === "missing-landmarks");
+  const sideFacing = !issues.some((issue) => issue.id === "side-facing");
+  const setupReady = cameraReady && poseDetected && inFrame && sideFacing;
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
+      <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
+        <PhaseIndicator current="interview" />
       </div>
-    </div>
 
-    {/* Right: AI Chat */}
-    <div className="w-full md:w-80 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card flex flex-col max-h-[40vh] md:max-h-none">
-      <div className="p-3 md:p-4 border-b border-border bg-sage-light/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-terracotta-light flex items-center justify-center border border-terracotta/20">
-            <Award className="w-5 h-5 text-terracotta" />
-          </div>
-          <div>
-            <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
-            <p className="text-xs text-success flex items-center gap-1 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
-              Online
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
-        {chatMessages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {msg.from === "ai" && (
-              <div className="w-7 h-7 rounded-full bg-terracotta-light flex items-center justify-center mr-2 shrink-0 mt-1 border border-terracotta/20">
-                <span className="text-xs font-bold text-terracotta">AI</span>
-              </div>
-            )}
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.from === "user"
-                  ? "bg-peach/30 text-foreground rounded-br-sm border border-peach/40"
-                  : "bg-sage-light text-foreground rounded-bl-sm border border-sage/20"
-              }`}
+      <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
+        {phases.map((phase, i) => {
+          const isActive = phase.id === "interview";
+          return (
+            <span
+              key={phase.id}
+              className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
             >
-              {msg.text}
-            </div>
-            {msg.from === "user" && (
-              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center ml-2 shrink-0 mt-1">
-                <span className="text-xs font-bold text-primary-foreground">
-                  Me
+              {i + 1}. {phase.sublabel}
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
+        <div className="w-full max-w-3xl space-y-4">
+          <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[60vh] max-h-[680px] min-h-[460px]">
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-contain"
+              muted
+              playsInline
+            />
+            <canvas
+              ref={overlayRef}
+              className="absolute inset-0 h-full w-full pointer-events-none"
+            />
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-foreground/70 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${cameraReady ? "bg-terracotta animate-pulse" : "bg-muted-foreground/60"}`} />
+                <span className="text-xs text-muted-foreground font-medium">
+                  {cameraReady ? "SETUP CHECK LIVE" : "CONNECTING CAMERA"}
                 </span>
               </div>
+              <span className={`text-xs font-semibold ${setupReady ? "text-success" : "text-muted-foreground"}`}>
+                {setupReady ? "Setup Ready" : "Adjusting Setup"}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-semibold text-foreground mb-3">Setup checklist</p>
+            <div className="grid sm:grid-cols-3 gap-2 text-xs">
+              <SetupBadge label="Camera connected" ready={cameraReady} />
+              <SetupBadge label="Body in frame" ready={poseDetected && inFrame} />
+              <SetupBadge label="Side profile detected" ready={poseDetected && sideFacing} />
+            </div>
+            {cameraError && (
+              <p className="text-sm text-destructive mt-3">Camera error: {cameraError}</p>
+            )}
+            {!cameraError && !cameraReady && (
+              <p className="text-sm text-muted-foreground mt-3">
+                Waiting for camera permission...
+              </p>
+            )}
+            {issues.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-3">
+                {issues[0].message}
+              </p>
             )}
           </div>
-        ))}
-      </div>
-
-      <div className="p-3 md:p-4 border-t border-border">
-        <div className="flex items-center gap-2 bg-muted rounded-full px-4 py-2 border border-border">
-          <input
-            type="text"
-            placeholder="Type your answer..."
-            className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
-            readOnly
-          />
-          <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md">
-            <Send className="w-4 h-4 text-primary-foreground" />
-          </button>
         </div>
       </div>
-    </div>
-  </div>
-);
 
-const MovementPhase = () => (
-  <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
-    {/* Main: Camera */}
-    <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
-      <div className="w-full max-w-3xl">
-        <CameraPlaceholder label="Plank Analysis in Progress" />
-      </div>
-    </div>
-
-    {/* Right: Score sidebar */}
-    <div className="w-full md:w-96 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-5 md:p-6 overflow-y-auto">
-      <h3 className="font-serif text-xl text-foreground mb-6">Posture Score</h3>
-
-      <div className="flex justify-center mb-8">
-        <div className="relative w-32 h-32 md:w-36 md:h-36">
-          <svg
-            className="w-full h-full transform -rotate-90"
-            viewBox="0 0 120 120"
-          >
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              fill="none"
-              stroke="hsl(var(--muted))"
-              strokeWidth="8"
-            />
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              fill="none"
-              stroke="hsl(var(--sage))"
-              strokeWidth="8"
-              strokeDasharray={`${2 * Math.PI * 52 * 0.82} ${2 * Math.PI * 52 * 0.18}`}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-foreground">82</span>
-            <span className="text-xs text-muted-foreground">/ 100</span>
+      <div className="w-full md:w-80 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card flex flex-col max-h-[40vh] md:max-h-none">
+        <div className="p-3 md:p-4 border-b border-border bg-sage-light/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-terracotta-light flex items-center justify-center border border-terracotta/20">
+              <Award className="w-5 h-5 text-terracotta" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
+              <p className="text-xs text-success flex items-center gap-1 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
+                Online
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        {scoreBreakdown.map((item) => (
-          <div
-            key={item.label}
-            className="bg-background rounded-xl p-3 border border-border"
-          >
-            <div className="flex justify-between text-sm mb-1.5">
-              <span className="text-foreground font-semibold">
-                {item.label}
-              </span>
-              <span
-                className={
-                  item.status === "good"
-                    ? "text-sage font-bold"
-                    : "text-amber-soft font-bold"
-                }
-              >
-                {item.value}%
-              </span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
+          {chatMessages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
+            >
+              {msg.from === "ai" && (
+                <div className="w-7 h-7 rounded-full bg-terracotta-light flex items-center justify-center mr-2 shrink-0 mt-1 border border-terracotta/20">
+                  <span className="text-xs font-bold text-terracotta">AI</span>
+                </div>
+              )}
               <div
-                className={`h-2 rounded-full ${item.status === "good" ? "bg-sage" : "bg-amber-soft"}`}
-                style={{ width: `${item.value}%` }}
-              />
+                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.from === "user"
+                    ? "bg-peach/30 text-foreground rounded-br-sm border border-peach/40"
+                    : "bg-sage-light text-foreground rounded-bl-sm border border-sage/20"
+                }`}
+              >
+                {msg.text}
+              </div>
+              {msg.from === "user" && (
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center ml-2 shrink-0 mt-1">
+                  <span className="text-xs font-bold text-primary-foreground">
+                    Me
+                  </span>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <div className="mt-6 p-4 bg-sage-light rounded-xl border border-sage/25">
-        <p className="text-sm text-sage font-semibold flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" />
-          Keep your hips level with your shoulders for a better score.
-        </p>
+        <div className="p-3 md:p-4 border-t border-border">
+          <div className="flex items-center gap-2 bg-muted rounded-full px-4 py-2 border border-border">
+            <input
+              type="text"
+              placeholder="Type your answer..."
+              className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+              readOnly
+            />
+            <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md">
+              <Send className="w-4 h-4 text-primary-foreground" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+  );
+};
+
+const MovementPhase = () => {
+  const [running, setRunning] = useState(true);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const smoothedPoseRef = useRef<NormalizedLandmark[] | null>(null);
+
+  const posture = usePostureMonitor({
+    config: {
+      exercise: "plank",
+      smoothingAlpha: 0.6,
+      visibilityThreshold: 0.35,
+      scoreFloor: 0,
+    },
+  });
+
+  useEffect(() => {
+    const resizeOverlay = () => {
+      const canvas = overlayRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width));
+      canvas.height = Math.max(1, Math.round(rect.height));
+    };
+
+    resizeOverlay();
+    window.addEventListener("resize", resizeOverlay);
+    return () => window.removeEventListener("resize", resizeOverlay);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function setupCamera() {
+      setCameraError(null);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
+            aspectRatio: { ideal: 9 / 16 },
+            facingMode: "user",
+          },
+          audio: false,
+        });
+
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+        setCameraReady(true);
+      } catch (error) {
+        setCameraReady(false);
+        setCameraError(
+          error instanceof Error
+            ? error.message
+            : "Failed to access camera. Check browser permissions.",
+        );
+      }
+    }
+
+    setupCamera();
+
+    return () => {
+      isMounted = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      smoothedPoseRef.current = null;
+      if (overlayRef.current) clearPoseOverlay(overlayRef.current);
+      setCameraReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!running || !cameraReady) return;
+
+    let cancelled = false;
+
+    async function startDetection() {
+      const detector = await getPoseLandmarker();
+      if (cancelled) return;
+
+      const tick = () => {
+        const video = videoRef.current;
+        const overlay = overlayRef.current;
+
+        if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        const detection = detector.detectForVideo(video, performance.now());
+        const pose = extractFirstPose(detection);
+
+        if (pose && overlay) {
+          const smoothed = smoothPose(smoothedPoseRef.current, pose, 0.72);
+          smoothedPoseRef.current = smoothed;
+          drawPoseOverlay(
+            overlay,
+            smoothed,
+            video.videoWidth || 1,
+            video.videoHeight || 1,
+          );
+          posture.processFrame(Date.now(), fromMediaPipePose(smoothed));
+        } else if (overlay) {
+          smoothedPoseRef.current = null;
+          clearPoseOverlay(overlay);
+        }
+
+        rafRef.current = requestAnimationFrame(tick);
+      };
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    startDetection().catch((error) => {
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "Failed to initialize pose detector.",
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [cameraReady, running, posture.processFrame]);
+
+  const score = Math.round((posture.latestResult?.score ?? 0) * 100);
+  const scoreBreakdown = useMemo(
+    () => createScoreBreakdown(posture.latestResult?.metrics ?? {}, score),
+    [posture.latestResult, score],
+  );
+  const tip =
+    posture.issues[0] ?? "Keep your hips level with your shoulders for a better score.";
+  const circumference = 2 * Math.PI * 52;
+  const scoreArc = (circumference * score) / 100;
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
+      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
+        <div className="w-full max-w-3xl">
+          <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[70vh] max-h-[760px] min-h-[520px]">
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-contain"
+              muted
+              playsInline
+            />
+            <canvas
+              ref={overlayRef}
+              className="absolute inset-0 h-full w-full pointer-events-none"
+            />
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-foreground/70 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${running ? "bg-terracotta animate-pulse" : "bg-muted-foreground/60"}`} />
+                <span className="text-xs text-muted-foreground font-medium">
+                  {running ? "LIVE ANALYSIS" : "PAUSED"}
+                </span>
+              </div>
+              <Button variant="hero-outline" size="sm" onClick={() => setRunning((value) => !value)}>
+                {running ? "Pause" : "Resume"}
+              </Button>
+            </div>
+          </div>
+          {cameraError && (
+            <p className="text-sm text-destructive mt-3">Camera error: {cameraError}</p>
+          )}
+          {!cameraError && !cameraReady && (
+            <p className="text-sm text-muted-foreground mt-3">
+              Waiting for camera permission...
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="w-full md:w-96 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-5 md:p-6 overflow-y-auto">
+        <h3 className="font-serif text-xl text-foreground mb-6">Posture Score</h3>
+
+        <div className="flex justify-center mb-8">
+          <div className="relative w-32 h-32 md:w-36 md:h-36">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                stroke="hsl(var(--muted))"
+                strokeWidth="8"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                stroke="hsl(var(--sage))"
+                strokeWidth="8"
+                strokeDasharray={`${scoreArc} ${Math.max(0, circumference - scoreArc)}`}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-bold text-foreground">{score}</span>
+              <span className="text-xs text-muted-foreground">/ 100</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {scoreBreakdown.map((item) => (
+            <div
+              key={item.label}
+              className="bg-background rounded-xl p-3 border border-border"
+            >
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-foreground font-semibold">{item.label}</span>
+                <span
+                  className={
+                    item.status === "good"
+                      ? "text-sage font-bold"
+                      : "text-amber-soft font-bold"
+                  }
+                >
+                  {item.value}%
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${item.status === "good" ? "bg-sage" : "bg-amber-soft"}`}
+                  style={{ width: `${item.value}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 p-4 bg-sage-light rounded-xl border border-sage/25">
+          <p className="text-sm text-sage font-semibold flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            {tip}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SetupBadge = ({ label, ready }: { label: string; ready: boolean }) => (
+  <div
+    className={`rounded-lg border px-3 py-2 font-medium ${
+      ready
+        ? "border-success/30 bg-success-light text-success"
+        : "border-border bg-muted text-muted-foreground"
+    }`}
+  >
+    <span className="mr-1">{ready ? "✓" : "•"}</span>
+    {label}
   </div>
 );
+
+function createScoreBreakdown(
+  metrics: Record<string, number>,
+  overallScore: number,
+): ScoreItem[] {
+  const trunkAlignment = scoreFromDelta(Math.abs(180 - (metrics.trunkAngle ?? 180)), 1.4);
+  const hipPosition = scoreFromDelta((metrics.hipDelta ?? 0) * 1000, 1.7);
+  const shoulderStability = scoreFromDelta(metrics.shoulderTilt ?? 0, 2.4);
+  const coreControl = clampPercent(Math.round((overallScore + trunkAlignment) / 2));
+
+  return [
+    { label: "Back Alignment", value: trunkAlignment, status: statusFromScore(trunkAlignment) },
+    { label: "Hip Position", value: hipPosition, status: statusFromScore(hipPosition) },
+    {
+      label: "Shoulder Stability",
+      value: shoulderStability,
+      status: statusFromScore(shoulderStability),
+    },
+    { label: "Core Engagement", value: coreControl, status: statusFromScore(coreControl) },
+  ];
+}
+
+function scoreFromDelta(value: number, multiplier: number): number {
+  return clampPercent(Math.round(100 - value * multiplier));
+}
+
+function statusFromScore(value: number): "good" | "moderate" {
+  return value >= 80 ? "good" : "moderate";
+}
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
 
 const SummaryPhase = () => (
   <div className="flex items-center justify-center min-h-[calc(100vh-65px)] p-4 md:p-8">
