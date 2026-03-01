@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import PulsingOrb from "@/components/ui/PulsingOrb";
+import { useVapi } from "@/hooks/useVapi";
 import { fromMediaPipePose } from "@/posture/integration/mediapipeAdapter";
 import { usePostureMonitor } from "@/posture/react/usePostureMonitor";
 import {
@@ -66,11 +68,23 @@ type ScoreItem = {
 
 const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
+  const vapi = useVapi();
 
   const goToNext = () => {
     if (currentPhase === "interview") setCurrentPhase("movement");
     else if (currentPhase === "movement") setCurrentPhase("summary");
   };
+
+  useEffect(() => {
+    if (currentPhase === "interview") {
+      vapi.startCall(vapi.assistantIdDefault);
+    } else if (currentPhase === "movement" || currentPhase === "summary") {
+      vapi.startCall(vapi.assistantIdBackpain);
+    }
+    return () => {
+      vapi.endCall();
+    };
+  }, [currentPhase, vapi.startCall, vapi.endCall, vapi.assistantIdDefault, vapi.assistantIdBackpain]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,8 +117,8 @@ const Session = () => {
         </Button>
       </div>
 
-      {currentPhase === "interview" && <InterviewPhase />}
-      {currentPhase === "movement" && <MovementPhase />}
+      {currentPhase === "interview" && <InterviewPhase vapi={vapi} />}
+      {currentPhase === "movement" && <MovementPhase vapi={vapi} />}
       {currentPhase === "summary" && <SummaryPhase />}
     </div>
   );
@@ -163,7 +177,11 @@ const PhaseIndicator = ({ current }: { current: Phase }) => (
   </div>
 );
 
-const InterviewPhase = () => {
+const InterviewPhase = ({
+  vapi,
+}: {
+  vapi: ReturnType<typeof useVapi>;
+}) => {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
@@ -315,6 +333,14 @@ const InterviewPhase = () => {
   const inFrame = !issues.some((issue) => issue.id === "low-visibility" || issue.id === "missing-landmarks");
   const sideFacing = !issues.some((issue) => issue.id === "side-facing");
   const setupReady = cameraReady && poseDetected && inFrame && sideFacing;
+  const needsFullBody = !inFrame || !sideFacing;
+  const setupPrompt = cameraError
+    ? `Camera error: ${cameraError}`
+    : !cameraReady
+      ? "Waiting for camera permission..."
+      : needsFullBody
+        ? "Keep at least one full body side visible to the camera."
+        : null;
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
@@ -341,7 +367,7 @@ const InterviewPhase = () => {
           <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[60vh] max-h-[680px] min-h-[460px]">
             <video
               ref={videoRef}
-              className="absolute inset-0 h-full w-full object-contain"
+              className="absolute inset-0 h-full w-full object-cover"
               muted
               playsInline
             />
@@ -349,6 +375,13 @@ const InterviewPhase = () => {
               ref={overlayRef}
               className="absolute inset-0 h-full w-full pointer-events-none"
             />
+            {setupPrompt && (
+              <div className="absolute top-0 left-0 right-0 px-4 py-2 bg-foreground/70 backdrop-blur-sm">
+                <p className="text-xs text-muted-foreground font-medium">
+                  {setupPrompt}
+                </p>
+              </div>
+            )}
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-foreground/70 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${cameraReady ? "bg-terracotta animate-pulse" : "bg-muted-foreground/60"}`} />
@@ -362,27 +395,6 @@ const InterviewPhase = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-sm font-semibold text-foreground mb-3">Setup checklist</p>
-            <div className="grid sm:grid-cols-3 gap-2 text-xs">
-              <SetupBadge label="Camera connected" ready={cameraReady} />
-              <SetupBadge label="Body in frame" ready={poseDetected && inFrame} />
-              <SetupBadge label="Side profile detected" ready={poseDetected && sideFacing} />
-            </div>
-            {cameraError && (
-              <p className="text-sm text-destructive mt-3">Camera error: {cameraError}</p>
-            )}
-            {!cameraError && !cameraReady && (
-              <p className="text-sm text-muted-foreground mt-3">
-                Waiting for camera permission...
-              </p>
-            )}
-            {issues.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-3">
-                {issues[0].message}
-              </p>
-            )}
-          </div>
         </div>
       </div>
 
@@ -396,8 +408,22 @@ const InterviewPhase = () => {
               <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
               <p className="text-xs text-success flex items-center gap-1 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
-                Online
+                {vapi.isActive ? "Session Live" : "Connecting"}
               </p>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <div className="w-full flex justify-center">
+              <PulsingOrb mode={vapi.orbMode} size="sm" className="py-2" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="hero-outline"
+                size="sm"
+                onClick={vapi.endCall}
+              >
+                Stop Call
+              </Button>
             </div>
           </div>
         </div>
@@ -451,7 +477,11 @@ const InterviewPhase = () => {
   );
 };
 
-const MovementPhase = () => {
+const MovementPhase = ({
+  vapi,
+}: {
+  vapi: ReturnType<typeof useVapi>;
+}) => {
   const [running, setRunning] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -604,19 +634,49 @@ const MovementPhase = () => {
     () => createScoreBreakdown(posture.latestResult?.metrics ?? {}, score),
     [posture.latestResult, score],
   );
-  const tip =
-    posture.issues[0] ?? "Keep your hips level with your shoulders for a better score.";
+  const movementIssues = posture.latestResult?.issues ?? [];
+  const movementInFrame = !movementIssues.some(
+    (issue) => issue.id === "low-visibility" || issue.id === "missing-landmarks",
+  );
+  const movementSideFacing = !movementIssues.some((issue) => issue.id === "side-facing");
+  const analysisNeedsFullBody =
+    !movementInFrame || !movementSideFacing;
+  const analysisPrompt = cameraError
+    ? `Camera error: ${cameraError}`
+    : !cameraReady
+      ? "Waiting for camera permission..."
+      : analysisNeedsFullBody
+        ? "Keep at least one full body side visible to the camera."
+        : null;
   const circumference = 2 * Math.PI * 52;
   const scoreArc = (circumference * score) / 100;
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
+    <div className="flex flex-col md:flex-row md:items-stretch min-h-[calc(100vh-57px)] md:min-h-[calc(100vh-65px)]">
+      <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col self-stretch">
+        <PhaseIndicator current="movement" />
+      </div>
+
+      <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
+        {phases.map((phase, i) => {
+          const isActive = phase.id === "movement";
+          return (
+            <span
+              key={phase.id}
+              className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            >
+              {i + 1}. {phase.sublabel}
+            </span>
+          );
+        })}
+      </div>
+
       <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
         <div className="w-full max-w-3xl">
           <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[70vh] max-h-[760px] min-h-[520px]">
             <video
               ref={videoRef}
-              className="absolute inset-0 h-full w-full object-contain"
+              className="absolute inset-0 h-full w-full object-cover"
               muted
               playsInline
             />
@@ -624,6 +684,13 @@ const MovementPhase = () => {
               ref={overlayRef}
               className="absolute inset-0 h-full w-full pointer-events-none"
             />
+            {analysisPrompt && (
+              <div className="absolute top-0 left-0 right-0 px-4 py-2 bg-foreground/70 backdrop-blur-sm">
+                <p className="text-xs text-muted-foreground font-medium">
+                  {analysisPrompt}
+                </p>
+              </div>
+            )}
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-foreground/70 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${running ? "bg-terracotta animate-pulse" : "bg-muted-foreground/60"}`} />
@@ -636,22 +703,41 @@ const MovementPhase = () => {
               </Button>
             </div>
           </div>
-          {cameraError && (
-            <p className="text-sm text-destructive mt-3">Camera error: {cameraError}</p>
-          )}
-          {!cameraError && !cameraReady && (
-            <p className="text-sm text-muted-foreground mt-3">
-              Waiting for camera permission...
-            </p>
-          )}
         </div>
       </div>
 
-      <div className="w-full md:w-96 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-5 md:p-6 overflow-y-auto">
-        <h3 className="font-serif text-xl text-foreground mb-6">Posture Score</h3>
+      <div className="w-full md:w-96 md:self-stretch border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-4 md:p-5">
+        <div className="mb-4 rounded-lg border border-border bg-sage-light/30 p-3 md:p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-terracotta-light flex items-center justify-center border border-terracotta/20">
+              <Award className="w-5 h-5 text-terracotta" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
+              <p className="text-xs text-success flex items-center gap-1 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
+                {vapi.isActive ? "Session Live" : "Connecting"}
+              </p>
+            </div>
+          </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="relative w-32 h-32 md:w-36 md:h-36">
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <PulsingOrb mode={vapi.orbMode} size="xs" className="py-1" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="hero-outline"
+                size="sm"
+                onClick={vapi.endCall}
+              >
+                Stop Call
+              </Button>
+            </div>
+          </div>
+        </div>
+        <h3 className="font-serif text-lg text-foreground mb-3">Posture Score</h3>
+
+        <div className="flex flex-col items-center gap-2 mb-3">
+          <div className="relative w-16 h-16 md:w-20 md:h-20">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
               <circle
                 cx="60"
@@ -673,19 +759,19 @@ const MovementPhase = () => {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-foreground">{score}</span>
+              <span className="text-sm font-bold text-foreground">{score}</span>
               <span className="text-xs text-muted-foreground">/ 100</span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {scoreBreakdown.map((item) => (
             <div
               key={item.label}
-              className="bg-background rounded-xl p-3 border border-border"
+              className="bg-background rounded-lg p-2 border border-border"
             >
-              <div className="flex justify-between text-sm mb-1.5">
+              <div className="flex justify-between text-xs mb-1">
                 <span className="text-foreground font-semibold">{item.label}</span>
                 <span
                   className={
@@ -697,21 +783,14 @@ const MovementPhase = () => {
                   {item.value}%
                 </span>
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
+              <div className="w-full bg-muted rounded-full h-1">
                 <div
-                  className={`h-2 rounded-full ${item.status === "good" ? "bg-sage" : "bg-amber-soft"}`}
+                  className={`h-1 rounded-full ${item.status === "good" ? "bg-sage" : "bg-amber-soft"}`}
                   style={{ width: `${item.value}%` }}
                 />
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-6 p-4 bg-sage-light rounded-xl border border-sage/25">
-          <p className="text-sm text-sage font-semibold flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            {tip}
-          </p>
         </div>
       </div>
     </div>
@@ -765,8 +844,27 @@ function clampPercent(value: number): number {
 }
 
 const SummaryPhase = () => (
-  <div className="flex items-center justify-center min-h-[calc(100vh-65px)] p-4 md:p-8">
-    <div className="max-w-3xl w-full space-y-8 animate-fade-in">
+  <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
+    <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
+      <PhaseIndicator current="summary" />
+    </div>
+
+    <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
+      {phases.map((phase, i) => {
+        const isActive = phase.id === "summary";
+        return (
+          <span
+            key={phase.id}
+            className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+          >
+            {i + 1}. {phase.sublabel}
+          </span>
+        );
+      })}
+    </div>
+
+    <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+      <div className="max-w-3xl w-full space-y-8 animate-fade-in">
       <div className="text-center space-y-3">
         <p className="text-sm text-terracotta font-bold uppercase tracking-widest">
           Session Complete
@@ -824,15 +922,16 @@ const SummaryPhase = () => (
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-        <Button variant="hero" size="lg">
-          View Recovery Plan
-        </Button>
-        <Link to="/">
-          <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
-            Return Home
+        <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+          <Button variant="hero" size="lg">
+            View Recovery Plan
           </Button>
-        </Link>
+          <Link to="/">
+            <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+              Return Home
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   </div>
