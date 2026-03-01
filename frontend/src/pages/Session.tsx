@@ -85,10 +85,13 @@ const EXERCISE_LABELS: Record<ExerciseType, string> = {
 
 const HANDOFF_LINE =
   "Please step back until you fit in the box";
+const SUMMARY_TRIGGER_LINE =
+  "Take care of yourself";
 
 const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
   const [hasVoiceHandoff, setHasVoiceHandoff] = useState(false);
+  const [hasSummaryHandoff, setHasSummaryHandoff] = useState(false);
   const vapi = useVapi();
   const activeAssistantRef = useRef<string | null>(null);
   const requestedAssistantRef = useRef<string | null>(null);
@@ -176,6 +179,25 @@ const Session = () => {
     setHasVoiceHandoff(true);
     setCurrentPhase("movement");
   }, [currentPhase, hasVoiceHandoff, vapi.transcript]);
+
+  useEffect(() => {
+    if (currentPhase !== "movement" || hasSummaryHandoff) return;
+    if (vapi.transcript.length === 0) return;
+
+    const latestAssistant = [...vapi.transcript]
+      .reverse()
+      .find((entry) => isAssistantRole(entry.role));
+    if (!latestAssistant) return;
+
+    const text = normalizeForMatch(latestAssistant.text);
+    const triggerLine = normalizeForMatch(SUMMARY_TRIGGER_LINE);
+    const shouldHandoff = text.includes(triggerLine);
+
+    if (!shouldHandoff) return;
+
+    setHasSummaryHandoff(true);
+    setCurrentPhase("summary");
+  }, [currentPhase, hasSummaryHandoff, vapi.transcript]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -784,7 +806,11 @@ const MovementPhase = ({
 
     const now = Date.now();
     const goodEnough = latest.status === "good" && latest.score >= 0.88;
-    const issue = latest.issues[0]?.message;
+    const visibilityIssueIds = new Set(["low-visibility", "missing-landmarks", "side-facing"]);
+    const primaryFormIssue = latest.issues.find(
+      (item) => !visibilityIssueIds.has(item.id),
+    );
+    const issue = primaryFormIssue?.message ?? null;
 
     if (goodEnough) {
       goodStreakRef.current += 1;
@@ -811,7 +837,7 @@ const MovementPhase = ({
 
     goodStreakRef.current = 0;
     if (issue && now - lastAdviceAtRef.current > 8000) {
-      const coaching = `${issue} Focus on ${currentExerciseLabel}.`;
+      const coaching = issue;
       lastAdviceAtRef.current = now;
       if (vapi.isActive) vapi.speak(coaching);
     }
