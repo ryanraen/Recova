@@ -1520,22 +1520,35 @@ ${JSON.stringify(
   }, [summary]);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
-      <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
-        <PhaseIndicator current="summary" />
-      </div>
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)] bg-gradient-to-br from-background via-warm-white to-peach/20">
+    <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
+      <PhaseIndicator current="summary" />
+    </div>
 
-      <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
-        {phases.map((phase, i) => {
-          const isActive = phase.id === "summary";
-          return (
-            <span
-              key={phase.id}
-              className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${
-                isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}. {phase.sublabel}
+    <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
+      {phases.map((phase, i) => {
+        const isActive = phase.id === "summary";
+        return (
+          <span
+            key={phase.id}
+            className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+          >
+            {i + 1}. {phase.sublabel}
+          </span>
+        );
+      })}
+    </div>
+
+    <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+      <div className="max-w-4xl w-full space-y-8 animate-fade-in">
+      <div className="text-center space-y-3">
+        <p className="text-sm text-terracotta font-bold uppercase tracking-widest">
+          Session Complete
+        </p>
+        <div className="inline-flex items-center justify-center w-28 h-28 rounded-full bg-sage-light border-4 border-sage/30 mx-auto shadow-xl">
+          <div className="text-center">
+            <span className="text-4xl font-bold text-foreground block">
+              {summary ? <CountUp to={summary.averageScore} duration={1.5} /> : "--"}
             </span>
           );
         })}
@@ -1559,33 +1572,101 @@ ${JSON.stringify(
               Great effort! Here is your detailed breakdown.
             </p>
           </div>
+        </div>
+        <p className="text-muted-foreground text-lg">
+          Great effort! Here is your detailed breakdown.
+        </p>
+      </div>
+ 
+      <div className="grid sm:grid-cols-2 gap-5 md:gap-6">
+        <div className="bg-success-light rounded-3xl p-5 md:p-6 border-2 border-success/25 shadow-lg">
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+              <Check className="w-4 h-4 text-success" />
+            </div>
+            Summary
+          </h3>
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Generating summary...</p>
+          )}
+          {aiError && (
+            <p className="text-sm text-destructive">{aiError}</p>
+          )}
+          {!isLoading && !aiError && aiSummary && (
+            <MarkdownContent
+              text={aiSummary}
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!summary && !isLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your summary.
+            </p>
+          )}
+        </div>
 
-          {!summary && !isLoading ? (
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-sm text-center">
-              <p className="text-sm text-muted-foreground">
-                Complete the movement assessment to generate your recovery plan.
-              </p>
+        <div className="bg-amber-soft-light rounded-3xl p-5 md:p-6 border-2 border-amber-soft/25 shadow-lg">
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-soft/20 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-amber-soft" />
             </div>
-          ) : planPdfUrl ? (
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
-              <iframe
-                title="Recovery Plan PDF"
-                src={planPdfUrl}
-                ref={pdfFrameRef}
-                className="w-full h-[65vh] rounded-lg border border-border"
-              />
+            Recovery Plan
+          </h3>
+          {planLoading && (
+            <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+          )}
+          {planError && (
+            <p className="text-sm text-destructive">{planError}</p>
+          )}
+          {!planLoading && !planError && planText && (
+            <MarkdownContent
+              text={planText}
+              maxBlocks={8}
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!planLoading && !planError && !planText && aiSummary && (
+            <MarkdownContent
+              text={
+                extractRecoverySection(aiSummary) ??
+                "Click **View Recovery Plan** to generate a personalized detailed plan."
+              }
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!summary && !planLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your recovery plan.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
+        <Button variant="hero" size="lg" onClick={handleGeneratePlan}>
+          View Recovery Plan
+        </Button>
+          <Link to="/">
+            <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+              Return Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {showPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
+              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
+                Close
+              </Button>
             </div>
-          ) : (
-            <div className="bg-card rounded-2xl p-8 border border-border shadow-sm text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-full border-4 border-sage/30 border-t-sage animate-spin" />
-              <div className="space-y-2">
-                <p className="text-lg font-semibold text-foreground">
-                  Preparing your recovery plan
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  We’re analyzing your movement data and generating a personalized plan.
-                </p>
-              </div>
+            <div className="px-6 py-4 overflow-y-auto">
+              {planLoading && (
+                <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+              )}
               {planError && (
                 <p className="text-sm text-destructive">{planError}</p>
               )}
@@ -1606,3 +1687,85 @@ ${JSON.stringify(
 };
 
 export default Session;
+
+const MarkdownContent = ({
+  text,
+  className,
+  maxBlocks,
+}: {
+  text: string;
+  className?: string;
+  maxBlocks?: number;
+}) => {
+  const lines = text
+    .replace(/```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const visibleLines = typeof maxBlocks === "number" ? lines.slice(0, maxBlocks) : lines;
+
+  return (
+    <div className={className}>
+      {visibleLines.map((line, index) => {
+        if (/^#{1,3}\s+/.test(line)) {
+          const heading = line.replace(/^#{1,3}\s+/, "");
+          return (
+            <p key={`h-${index}`} className="font-semibold text-foreground">
+              {renderInlineMarkdown(heading)}
+            </p>
+          );
+        }
+
+        if (/^\d+[.)]\s+/.test(line)) {
+          const textValue = line.replace(/^\d+[.)]\s+/, "");
+          return (
+            <p key={`n-${index}`} className="pl-4 relative">
+              <span className="absolute left-0 text-terracotta">•</span>
+              {renderInlineMarkdown(textValue)}
+            </p>
+          );
+        }
+
+        if (/^[-*]\s+/.test(line)) {
+          const textValue = line.replace(/^[-*]\s+/, "");
+          return (
+            <p key={`b-${index}`} className="pl-4 relative">
+              <span className="absolute left-0 text-terracotta">•</span>
+              {renderInlineMarkdown(textValue)}
+            </p>
+          );
+        }
+
+        return <p key={`p-${index}`}>{renderInlineMarkdown(line)}</p>;
+      })}
+    </div>
+  );
+};
+
+function renderInlineMarkdown(input: string): ReactNode {
+  const parts = input.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`m-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={`m-${index}`}>{part}</span>;
+  });
+}
+
+function extractRecoverySection(text: string): string | null {
+  const cleanLines = text
+    .replace(/```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (cleanLines.length === 0) return null;
+
+  const startIndex = cleanLines.findIndex((line) =>
+    /recovery\s*plan|daily\s*mobility|strength\s*&\s*stability|form\s*cues/i.test(line),
+  );
+
+  if (startIndex === -1) return null;
+  const sectionLines = cleanLines.slice(startIndex, Math.min(startIndex + 8, cleanLines.length));
+  return sectionLines.join("\n");
+}
