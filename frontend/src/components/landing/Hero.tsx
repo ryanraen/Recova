@@ -78,6 +78,15 @@ const Hero = () => {
               </div>
               Platform Demo
             </Button>
+            <Link to="/gallery">
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-white border-2 border-border hover:bg-sage-light hover:border-sage font-semibold rounded-full px-8 py-6 text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95 group"
+              >
+                Exercise Gallery
+              </Button>
+            </Link>
           </div>
 
           {/* Reviews counter */}
