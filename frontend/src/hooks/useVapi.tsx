@@ -62,7 +62,12 @@ export function useVapi() {
     setTranscript([]);
     setAssessmentResult(null);
     setError(null);
-    await vapiRef.current?.start(assistantId ?? VAPI_ASSISTANT_ID);
+    try {
+      await vapiRef.current?.start(assistantId ?? VAPI_ASSISTANT_ID);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to start voice session");
+      setCallState("idle");
+    }
   }, []);
 
   const endCall = useCallback(() => {
@@ -75,6 +80,11 @@ export function useVapi() {
     const next = !vapiRef.current.isMuted();
     vapiRef.current.setMuted(next);
     setIsMuted(next);
+  }, []);
+
+  const speak = useCallback((message: string) => {
+    if (!message.trim()) return;
+    vapiRef.current?.say(message);
   }, []);
 
   return {
@@ -90,5 +100,6 @@ export function useVapi() {
     assistantIdBackpain: VAPI_ASSISTANT_ID_BACKPAIN,
     endCall,
     toggleMute,
+    speak,
   };
 }

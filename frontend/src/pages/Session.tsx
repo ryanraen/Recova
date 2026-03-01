@@ -5,6 +5,7 @@ import PulsingOrb from "@/components/ui/PulsingOrb";
 import { useVapi } from "@/hooks/useVapi";
 import { fromMediaPipePose } from "@/posture/integration/mediapipeAdapter";
 import { usePostureMonitor } from "@/posture/react/usePostureMonitor";
+import type { ExerciseType } from "@/posture/types";
 import {
   clearPoseOverlay,
   drawPoseOverlay,
@@ -66,9 +67,32 @@ type ScoreItem = {
   status: "good" | "moderate";
 };
 
+const MOVEMENT_EXERCISES: ExerciseType[] = [
+  "squat",
+  "forwardExtension",
+  "backExtension",
+  "plank",
+  "bridge",
+];
+
+const EXERCISE_LABELS: Record<ExerciseType, string> = {
+  squat: "Squat",
+  forwardExtension: "Forward Extension",
+  backExtension: "Back Extension",
+  plank: "Plank",
+  bridge: "Bridge",
+};
+
+const HANDOFF_LINE =
+  "Please step back until you fit in the box";
+
 const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
+  const [hasVoiceHandoff, setHasVoiceHandoff] = useState(false);
   const vapi = useVapi();
+  const activeAssistantRef = useRef<string | null>(null);
+  const requestedAssistantRef = useRef<string | null>(null);
+  const isSwitchingAssistantRef = useRef(false);
 
   const goToNext = () => {
     if (currentPhase === "interview") setCurrentPhase("movement");
@@ -76,15 +100,82 @@ const Session = () => {
   };
 
   useEffect(() => {
-    if (currentPhase === "interview") {
-      vapi.startCall(vapi.assistantIdDefault);
-    } else if (currentPhase === "movement" || currentPhase === "summary") {
-      vapi.startCall(vapi.assistantIdBackpain);
-    }
+    const targetAssistant =
+      currentPhase === "interview"
+        ? vapi.assistantIdDefault
+        : vapi.assistantIdBackpain;
+
+    if (!targetAssistant) return;
+    if (activeAssistantRef.current === targetAssistant) return;
+    if (requestedAssistantRef.current === targetAssistant) return;
+    if (isSwitchingAssistantRef.current) return;
+
+    let cancelled = false;
+    requestedAssistantRef.current = targetAssistant;
+    isSwitchingAssistantRef.current = true;
+
+    const switchAssistant = async () => {
+      try {
+        if (
+          activeAssistantRef.current &&
+          activeAssistantRef.current !== targetAssistant
+        ) {
+          vapi.endCall();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        if (cancelled) return;
+        await vapi.startCall(targetAssistant);
+        if (!cancelled) {
+          activeAssistantRef.current = targetAssistant;
+        }
+      } catch (error) {
+        requestedAssistantRef.current = null;
+        console.error("Failed to switch voice assistant", error);
+      } finally {
+        isSwitchingAssistantRef.current = false;
+      }
+    };
+
+    switchAssistant();
+
     return () => {
+      cancelled = true;
+    };
+  }, [
+    currentPhase,
+    vapi.startCall,
+    vapi.endCall,
+    vapi.assistantIdDefault,
+    vapi.assistantIdBackpain,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      requestedAssistantRef.current = null;
+      isSwitchingAssistantRef.current = false;
+      activeAssistantRef.current = null;
       vapi.endCall();
     };
-  }, [currentPhase, vapi.startCall, vapi.endCall, vapi.assistantIdDefault, vapi.assistantIdBackpain]);
+  }, [vapi.endCall]);
+
+  useEffect(() => {
+    if (currentPhase !== "interview" || hasVoiceHandoff) return;
+    if (vapi.transcript.length === 0) return;
+
+    const latestAssistant = [...vapi.transcript]
+      .reverse()
+      .find((entry) => isAssistantRole(entry.role));
+    if (!latestAssistant) return;
+
+    const text = normalizeForMatch(latestAssistant.text);
+    const handoffLine = normalizeForMatch(HANDOFF_LINE);
+    const shouldHandoff = text.includes(handoffLine);
+
+    if (!shouldHandoff) return;
+
+    setHasVoiceHandoff(true);
+    setCurrentPhase("movement");
+  }, [currentPhase, hasVoiceHandoff, vapi.transcript]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -341,6 +432,12 @@ const InterviewPhase = ({
       : needsFullBody
         ? "Keep at least one full body side visible to the camera."
         : null;
+  const transcriptMessages = vapi.transcript
+    .filter((entry) => typeof entry.text === "string" && entry.text.trim().length > 0)
+    .map((entry) => ({
+      from: isAssistantRole(entry.role) ? "ai" : "user",
+      text: entry.text.trim(),
+    }));
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-57px)] md:h-[calc(100vh-65px)]">
@@ -429,34 +526,42 @@ const InterviewPhase = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
-          {chatMessages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.from === "ai" && (
-                <div className="w-7 h-7 rounded-full bg-terracotta-light flex items-center justify-center mr-2 shrink-0 mt-1 border border-terracotta/20">
-                  <span className="text-xs font-bold text-terracotta">AI</span>
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.from === "user"
-                    ? "bg-peach/30 text-foreground rounded-br-sm border border-peach/40"
-                    : "bg-sage-light text-foreground rounded-bl-sm border border-sage/20"
-                }`}
-              >
-                {msg.text}
-              </div>
-              {msg.from === "user" && (
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center ml-2 shrink-0 mt-1">
-                  <span className="text-xs font-bold text-primary-foreground">
-                    Me
-                  </span>
-                </div>
-              )}
+          {transcriptMessages.length === 0 ? (
+            <div className="rounded-xl border border-border bg-muted p-3">
+              <p className="text-sm text-muted-foreground">
+                Waiting for live transcript...
+              </p>
             </div>
-          ))}
+          ) : (
+            transcriptMessages.map((msg, i) => (
+              <div
+                key={`${msg.from}-${i}-${msg.text.slice(0, 16)}`}
+                className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.from === "ai" && (
+                  <div className="w-7 h-7 rounded-full bg-terracotta-light flex items-center justify-center mr-2 shrink-0 mt-1 border border-terracotta/20">
+                    <span className="text-xs font-bold text-terracotta">AI</span>
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    msg.from === "user"
+                      ? "bg-peach/30 text-foreground rounded-br-sm border border-peach/40"
+                      : "bg-sage-light text-foreground rounded-bl-sm border border-sage/20"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+                {msg.from === "user" && (
+                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center ml-2 shrink-0 mt-1">
+                    <span className="text-xs font-bold text-primary-foreground">
+                      Me
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         <div className="p-3 md:p-4 border-t border-border">
@@ -485,16 +590,38 @@ const MovementPhase = ({
   const [running, setRunning] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [successPopup, setSuccessPopup] = useState<string | null>(null);
+  const [isRoutineComplete, setIsRoutineComplete] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const smoothedPoseRef = useRef<NormalizedLandmark[] | null>(null);
+  const goodStreakRef = useRef(0);
+  const lastAdviceAtRef = useRef(0);
+  const lastTransitionAtRef = useRef(0);
+  const lastExerciseAnnouncedRef = useRef<number | null>(null);
+  const successPopupTimerRef = useRef<number | null>(null);
+
+  const currentExercise = MOVEMENT_EXERCISES[exerciseIndex];
+  const currentExerciseLabel = EXERCISE_LABELS[currentExercise];
+
+  const showSuccessPopup = (message: string, durationMs = 2800) => {
+    setSuccessPopup(message);
+    if (successPopupTimerRef.current !== null) {
+      window.clearTimeout(successPopupTimerRef.current);
+    }
+    successPopupTimerRef.current = window.setTimeout(() => {
+      setSuccessPopup(null);
+      successPopupTimerRef.current = null;
+    }, durationMs);
+  };
 
   const posture = usePostureMonitor({
     config: {
-      exercise: "plank",
+      exercise: currentExercise,
       smoothingAlpha: 0.6,
       visibilityThreshold: 0.35,
       scoreFloor: 0,
@@ -513,6 +640,15 @@ const MovementPhase = ({
     resizeOverlay();
     window.addEventListener("resize", resizeOverlay);
     return () => window.removeEventListener("resize", resizeOverlay);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (successPopupTimerRef.current !== null) {
+        window.clearTimeout(successPopupTimerRef.current);
+        successPopupTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -569,6 +705,18 @@ const MovementPhase = ({
       setCameraReady(false);
     };
   }, []);
+
+  useEffect(() => {
+    if (!vapi.isActive) return;
+    if (lastExerciseAnnouncedRef.current === exerciseIndex) return;
+
+    setSuccessPopup(null);
+    const total = MOVEMENT_EXERCISES.length;
+    vapi.speak(
+      `Exercise ${exerciseIndex + 1} of ${total}: ${currentExerciseLabel}. Hold steady and follow the on-screen guidance.`,
+    );
+    lastExerciseAnnouncedRef.current = exerciseIndex;
+  }, [exerciseIndex, currentExerciseLabel, vapi.isActive, vapi.speak]);
 
   useEffect(() => {
     if (!running || !cameraReady) return;
@@ -629,6 +777,55 @@ const MovementPhase = ({
     };
   }, [cameraReady, running, posture.processFrame]);
 
+  useEffect(() => {
+    if (!running || !cameraReady || isRoutineComplete) return;
+    const latest = posture.latestResult;
+    if (!latest) return;
+
+    const now = Date.now();
+    const goodEnough = latest.status === "good" && latest.score >= 0.88;
+    const issue = latest.issues[0]?.message;
+
+    if (goodEnough) {
+      goodStreakRef.current += 1;
+      if (goodStreakRef.current >= 18 && now - lastTransitionAtRef.current > 7000) {
+        const nextIndex = exerciseIndex + 1;
+        if (nextIndex < MOVEMENT_EXERCISES.length) {
+          lastTransitionAtRef.current = now;
+          goodStreakRef.current = 0;
+          const nextLabel = EXERCISE_LABELS[MOVEMENT_EXERCISES[nextIndex]];
+          const transitionMessage = `Great form on ${currentExerciseLabel}. Let's move to ${nextLabel}.`;
+          showSuccessPopup(`Great form on ${currentExerciseLabel}!`);
+          if (vapi.isActive) vapi.speak(transitionMessage);
+          setExerciseIndex(nextIndex);
+        } else {
+          setIsRoutineComplete(true);
+          const completionMessage =
+            "Excellent work. You completed all exercises in this movement session.";
+          showSuccessPopup("Excellent work. Routine complete.");
+          if (vapi.isActive) vapi.speak(completionMessage);
+        }
+      }
+      return;
+    }
+
+    goodStreakRef.current = 0;
+    if (issue && now - lastAdviceAtRef.current > 8000) {
+      const coaching = `${issue} Focus on ${currentExerciseLabel}.`;
+      lastAdviceAtRef.current = now;
+      if (vapi.isActive) vapi.speak(coaching);
+    }
+  }, [
+    posture.latestResult,
+    running,
+    cameraReady,
+    isRoutineComplete,
+    exerciseIndex,
+    currentExerciseLabel,
+    vapi.isActive,
+    vapi.speak,
+  ]);
+
   const score = Math.round((posture.latestResult?.score ?? 0) * 100);
   const scoreBreakdown = useMemo(
     () => createScoreBreakdown(posture.latestResult?.metrics ?? {}, score),
@@ -636,19 +833,13 @@ const MovementPhase = ({
   );
   const tip =
     posture.issues[0] ?? "Keep your hips level with your shoulders for a better score.";
-  const feedbackMessage =
-    posture.issues[0] ??
-    (cameraReady
-      ? posture.status === "good"
-        ? "Great form. Keep this alignment."
-        : "Hold steady and maintain your alignment."
-      : "Preparing movement analysis...");
-  const feedbackToneClass =
-    posture.status === "good"
-      ? "bg-success text-success-foreground border-success"
-      : posture.status === "bad"
-        ? "bg-destructive text-destructive-foreground border-destructive"
-        : "bg-amber-soft text-foreground border-amber-soft";
+  const outOfFrameIssue = posture.latestResult?.issues.find(
+    (issue) => issue.id === "low-visibility" || issue.id === "missing-landmarks",
+  );
+  const popupMessage = outOfFrameIssue?.message ?? successPopup;
+  const popupToneClass = outOfFrameIssue
+    ? "bg-destructive text-destructive-foreground border-destructive"
+    : "bg-success text-success-foreground border-success";
   const circumference = 2 * Math.PI * 52;
   const scoreArc = (circumference * score) / 100;
 
@@ -685,13 +876,20 @@ const MovementPhase = ({
               ref={overlayRef}
               className="absolute inset-0 h-full w-full pointer-events-none"
             />
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2">
-              <div
-                className={`rounded-full border px-4 py-2 text-xs md:text-sm font-semibold shadow-lg whitespace-nowrap max-w-[90vw] truncate ${feedbackToneClass}`}
-                title={feedbackMessage}
-              >
-                {feedbackMessage}
+            {popupMessage && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2">
+                <div
+                  className={`rounded-full border px-4 py-2 text-xs md:text-sm font-semibold shadow-lg whitespace-nowrap max-w-[90vw] truncate ${popupToneClass}`}
+                  title={popupMessage}
+                >
+                  {popupMessage}
+                </div>
               </div>
+            )}
+            <div className="absolute top-16 left-4 z-10 rounded-md bg-foreground/80 border border-border px-3 py-1">
+              <p className="text-xs text-primary-foreground font-semibold">
+                Exercise: {currentExerciseLabel} ({exerciseIndex + 1}/{MOVEMENT_EXERCISES.length})
+              </p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-foreground/70 backdrop-blur-sm">
               <div className="flex items-center gap-2">
@@ -843,6 +1041,22 @@ function statusFromScore(value: number): "good" | "moderate" {
 
 function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, value));
+}
+
+function normalizeForMatch(value: string): string {
+  if (typeof value !== "string") return "";
+  return value
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isAssistantRole(role: unknown): boolean {
+  if (typeof role !== "string") return false;
+  const value = role.toLowerCase().trim();
+  return value === "assistant" || value === "bot" || value === "ai";
 }
 
 const SummaryPhase = () => (
