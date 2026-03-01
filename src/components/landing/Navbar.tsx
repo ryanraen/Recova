@@ -43,6 +43,12 @@ const Navbar = () => {
           >
             About Us
           </a>
+          <Link
+            to="/gallery"
+            className="text-white/90 hover:text-white transition-colors text-sm font-medium"
+          >
+            Gallery
+          </Link>
         </div>
 
         <Link to="/session" className="hidden md:block">
@@ -79,6 +85,9 @@ const Navbar = () => {
           <a href="#footer" className="text-white font-medium text-sm py-2">
             About Us
           </a>
+          <Link to="/gallery" className="text-white font-medium text-sm py-2">
+            Gallery
+          </Link>
           <Link to="/session">
             <Button
               variant="default"
