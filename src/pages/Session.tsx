@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PulsingOrb from "@/components/ui/PulsingOrb";
@@ -221,9 +221,12 @@ const Session = () => {
   }, [currentPhase, hasSummaryHandoff, vapi.transcript]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="pointer-events-none absolute -top-20 -left-16 h-72 w-72 rounded-full bg-sage-light/45 blur-3xl" />
+      <div className="pointer-events-none absolute top-24 -right-24 h-80 w-80 rounded-full bg-peach/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-1/3 h-72 w-72 rounded-full bg-terracotta-light/35 blur-3xl" />
       {/* Header */}
-      <div className="px-4 md:px-6 py-3 md:py-4 border-b-2 border-border bg-card flex items-center justify-between shadow-sm">
+      <div className="relative z-10 px-4 md:px-6 py-3 md:py-4 border-b-2 border-border/80 bg-card/90 backdrop-blur-md flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold bg-peach/40 text-peach-foreground px-3 py-1 rounded-full uppercase tracking-wider border border-peach/60">
             Phase{" "}
@@ -233,7 +236,7 @@ const Session = () => {
                 ? 2
                 : 3}
           </span>
-          <h1 className="text-lg md:text-xl font-serif text-foreground">
+          <h1 className="text-lg md:text-xl font-serif bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
             {currentPhase === "interview"
               ? "The Interview & Setup"
               : currentPhase === "movement"
@@ -251,20 +254,22 @@ const Session = () => {
         </Button>
       </div>
 
-      {currentPhase === "interview" && (
-        <InterviewPhase vapi={vapi} assistantId={vapi.assistantIdDefault} />
-      )}
-      {currentPhase === "movement" && (
-        <MovementPhase
-          vapi={vapi}
-          assistantId={vapi.assistantIdBackpain}
-          onSummaryReady={setMovementSummary}
-          onComplete={() => setCurrentPhase("summary")}
-        />
-      )}
-      {currentPhase === "summary" && (
-        <SummaryPhase summary={movementSummary} />
-      )}
+      <div className="relative z-10">
+        {currentPhase === "interview" && (
+          <InterviewPhase vapi={vapi} assistantId={vapi.assistantIdDefault} />
+        )}
+        {currentPhase === "movement" && (
+          <MovementPhase
+            vapi={vapi}
+            assistantId={vapi.assistantIdBackpain}
+            onSummaryReady={setMovementSummary}
+            onComplete={() => setCurrentPhase("summary")}
+          />
+        )}
+        {currentPhase === "summary" && (
+          <SummaryPhase summary={movementSummary} />
+        )}
+      </div>
     </div>
   );
 };
@@ -522,9 +527,9 @@ const InterviewPhase = ({
         })}
       </div>
 
-      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
+      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-gradient-to-br from-background via-warm-white to-muted/40">
         <div className="w-full max-w-3xl space-y-4">
-          <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[60vh] max-h-[680px] min-h-[460px]">
+          <div className="bg-foreground/95 rounded-3xl relative overflow-hidden shadow-2xl border-4 border-primary/20 h-[60vh] max-h-[680px] min-h-[460px]">
             <video
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-contain"
@@ -554,12 +559,16 @@ const InterviewPhase = ({
               </span>
             </div>
           </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <SetupBadge label="Camera Ready" ready={cameraReady} />
+            <SetupBadge label="In Frame" ready={inFrame} />
+            <SetupBadge label="Side Facing" ready={sideFacing} />
+          </div>
         </div>
       </div>
 
-      <div className="w-full md:w-80 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card flex flex-col max-h-[40vh] md:max-h-none">
-        <div className="p-3 md:p-4 border-b border-border bg-sage-light/30">
+      <div className="w-full md:w-80 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card/95 backdrop-blur-md flex flex-col max-h-[40vh] md:max-h-none shadow-xl">
+        <div className="p-3 md:p-4 border-b border-border bg-gradient-to-r from-sage-light/40 to-peach/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-terracotta/20 bg-terracotta-light">
               <img
@@ -601,7 +610,10 @@ const InterviewPhase = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4" ref={chatScrollRef}>
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4 bg-white/55" ref={chatScrollRef}>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            Live Transcript
+          </p>
           {transcriptMessages.length === 0 ? (
             <div className="rounded-xl border border-border bg-muted p-3">
               <p className="text-sm text-muted-foreground">
@@ -1075,9 +1087,9 @@ const MovementPhase = ({
         })}
       </div>
 
-      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-background">
+      <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-gradient-to-br from-background via-warm-white to-sage-light/20">
         <div className="w-full max-w-3xl">
-          <div className="bg-foreground/95 rounded-2xl relative overflow-hidden shadow-xl h-[70vh] max-h-[760px] min-h-[520px]">
+          <div className="bg-foreground/95 rounded-3xl relative overflow-hidden shadow-2xl border-4 border-primary/20 h-[70vh] max-h-[760px] min-h-[520px]">
             <video
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-contain"
@@ -1104,8 +1116,8 @@ const MovementPhase = ({
                 </div>
               </div>
             )}
-            <div className="absolute top-16 left-4 z-10 rounded-md bg-foreground/80 border border-border px-3 py-1">
-              <p className="text-xs text-primary-foreground font-semibold">
+            <div className="absolute top-16 left-4 z-10 rounded-full bg-card/95 border border-primary/20 px-4 py-1.5 shadow-lg backdrop-blur-sm">
+              <p className="text-xs text-foreground font-bold tracking-wide">
                 Exercise: {currentExerciseLabel} ({exerciseIndex + 1}/{MOVEMENT_EXERCISES.length})
               </p>
             </div>
@@ -1124,8 +1136,8 @@ const MovementPhase = ({
         </div>
       </div>
 
-      <div className="w-full md:w-96 md:self-stretch border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-4 md:p-5">
-        <div className="mb-4 rounded-lg border border-border bg-sage-light/30 p-3 md:p-4">
+      <div className="w-full md:w-96 md:self-stretch border-t-2 md:border-t-0 md:border-l-2 border-border bg-card/95 backdrop-blur-md p-4 md:p-5 shadow-xl">
+        <div className="mb-4 rounded-2xl border border-border bg-gradient-to-r from-sage-light/35 to-peach/25 p-3 md:p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-terracotta/20 bg-terracotta-light">
               <img
@@ -1165,7 +1177,9 @@ const MovementPhase = ({
           </div>
           </div>
         </div>
-        <h3 className="font-serif text-lg text-foreground mb-3">Posture Score</h3>
+        <h3 className="font-serif text-lg text-foreground mb-3 bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
+          Posture Score
+        </h3>
 
         <div className="flex flex-col items-center gap-2 mb-3">
           <div className="relative w-16 h-16 md:w-20 md:h-20">
@@ -1198,10 +1212,7 @@ const MovementPhase = ({
 
         <div className="space-y-3">
           {scoreBreakdown.map((item) => (
-            <div
-              key={item.label}
-              className="bg-background rounded-lg p-2 border border-border"
-            >
+            <div key={item.label} className="bg-white/80 rounded-xl p-2 border border-border shadow-sm">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-foreground font-semibold">{item.label}</span>
                 <span
@@ -1222,6 +1233,13 @@ const MovementPhase = ({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border bg-white/80 p-3 shadow-sm">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+            Current Guidance
+          </p>
+          <p className="text-sm text-foreground leading-relaxed">{tip}</p>
         </div>
       </div>
     </div>
@@ -1499,10 +1517,10 @@ ${JSON.stringify(
   }, [summary]);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
-      <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
-        <PhaseIndicator current="summary" />
-      </div>
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)] bg-gradient-to-br from-background via-warm-white to-peach/20">
+    <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
+      <PhaseIndicator current="summary" />
+    </div>
 
     <div className="md:hidden flex gap-2 p-3 bg-card border-b border-border overflow-x-auto">
       {phases.map((phase, i) => {
@@ -1519,12 +1537,12 @@ ${JSON.stringify(
     </div>
 
     <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-      <div className="max-w-3xl w-full space-y-8 animate-fade-in">
+      <div className="max-w-4xl w-full space-y-8 animate-fade-in">
       <div className="text-center space-y-3">
         <p className="text-sm text-terracotta font-bold uppercase tracking-widest">
           Session Complete
         </p>
-        <div className="inline-flex items-center justify-center w-28 h-28 rounded-full bg-sage-light border-4 border-sage/30 mx-auto">
+        <div className="inline-flex items-center justify-center w-28 h-28 rounded-full bg-sage-light border-4 border-sage/30 mx-auto shadow-xl">
           <div className="text-center">
             <span className="text-4xl font-bold text-foreground block">
               {summary ? <CountUp to={summary.averageScore} duration={1.5} /> : "--"}
@@ -1558,31 +1576,94 @@ ${JSON.stringify(
       </div>
  
       <div className="grid sm:grid-cols-2 gap-5 md:gap-6">
-        <div className="bg-success-light rounded-2xl p-5 md:p-6 border-2 border-success/25 shadow-sm">
+        <div className="bg-success-light rounded-3xl p-5 md:p-6 border-2 border-success/25 shadow-lg">
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
               <Check className="w-4 h-4 text-success" />
             </div>
-          ) : planPdfUrl ? (
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
-              <iframe
-                title="Recovery Plan PDF"
-                src={planPdfUrl}
-                ref={pdfFrameRef}
-                className="w-full h-[65vh] rounded-lg border border-border"
-              />
+            Summary
+          </h3>
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Generating summary...</p>
+          )}
+          {aiError && (
+            <p className="text-sm text-destructive">{aiError}</p>
+          )}
+          {!isLoading && !aiError && aiSummary && (
+            <MarkdownContent
+              text={aiSummary}
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!summary && !isLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your summary.
+            </p>
+          )}
+        </div>
+
+        <div className="bg-amber-soft-light rounded-3xl p-5 md:p-6 border-2 border-amber-soft/25 shadow-lg">
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-soft/20 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-amber-soft" />
             </div>
-          ) : (
-            <div className="bg-card rounded-2xl p-8 border border-border shadow-sm text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-full border-4 border-sage/30 border-t-sage animate-spin" />
-              <div className="space-y-2">
-                <p className="text-lg font-semibold text-foreground">
-                  Preparing your recovery plan
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  We’re analyzing your movement data and generating a personalized plan.
-                </p>
-              </div>
+            Recovery Plan
+          </h3>
+          {planLoading && (
+            <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+          )}
+          {planError && (
+            <p className="text-sm text-destructive">{planError}</p>
+          )}
+          {!planLoading && !planError && planText && (
+            <MarkdownContent
+              text={planText}
+              maxBlocks={8}
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!planLoading && !planError && !planText && aiSummary && (
+            <MarkdownContent
+              text={
+                extractRecoverySection(aiSummary) ??
+                "Click **View Recovery Plan** to generate a personalized detailed plan."
+              }
+              className="text-sm text-foreground leading-relaxed space-y-2"
+            />
+          )}
+          {!summary && !planLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your recovery plan.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
+        <Button variant="hero" size="lg" onClick={handleGeneratePlan}>
+          View Recovery Plan
+        </Button>
+          <Link to="/">
+            <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+              Return Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {showPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
+              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto">
+              {planLoading && (
+                <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+              )}
               {planError && (
                 <p className="text-sm text-destructive">{planError}</p>
               )}
@@ -1603,3 +1684,85 @@ ${JSON.stringify(
 };
 
 export default Session;
+
+const MarkdownContent = ({
+  text,
+  className,
+  maxBlocks,
+}: {
+  text: string;
+  className?: string;
+  maxBlocks?: number;
+}) => {
+  const lines = text
+    .replace(/```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const visibleLines = typeof maxBlocks === "number" ? lines.slice(0, maxBlocks) : lines;
+
+  return (
+    <div className={className}>
+      {visibleLines.map((line, index) => {
+        if (/^#{1,3}\s+/.test(line)) {
+          const heading = line.replace(/^#{1,3}\s+/, "");
+          return (
+            <p key={`h-${index}`} className="font-semibold text-foreground">
+              {renderInlineMarkdown(heading)}
+            </p>
+          );
+        }
+
+        if (/^\d+[.)]\s+/.test(line)) {
+          const textValue = line.replace(/^\d+[.)]\s+/, "");
+          return (
+            <p key={`n-${index}`} className="pl-4 relative">
+              <span className="absolute left-0 text-terracotta">•</span>
+              {renderInlineMarkdown(textValue)}
+            </p>
+          );
+        }
+
+        if (/^[-*]\s+/.test(line)) {
+          const textValue = line.replace(/^[-*]\s+/, "");
+          return (
+            <p key={`b-${index}`} className="pl-4 relative">
+              <span className="absolute left-0 text-terracotta">•</span>
+              {renderInlineMarkdown(textValue)}
+            </p>
+          );
+        }
+
+        return <p key={`p-${index}`}>{renderInlineMarkdown(line)}</p>;
+      })}
+    </div>
+  );
+};
+
+function renderInlineMarkdown(input: string): ReactNode {
+  const parts = input.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`m-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={`m-${index}`}>{part}</span>;
+  });
+}
+
+function extractRecoverySection(text: string): string | null {
+  const cleanLines = text
+    .replace(/```/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (cleanLines.length === 0) return null;
+
+  const startIndex = cleanLines.findIndex((line) =>
+    /recovery\s*plan|daily\s*mobility|strength\s*&\s*stability|form\s*cues/i.test(line),
+  );
+
+  if (startIndex === -1) return null;
+  const sectionLines = cleanLines.slice(startIndex, Math.min(startIndex + 8, cleanLines.length));
+  return sectionLines.join("\n");
+}
