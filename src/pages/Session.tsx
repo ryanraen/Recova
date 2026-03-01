@@ -1529,17 +1529,18 @@ ${JSON.stringify(
         {phases.map((phase, i) => {
           const isActive = phase.id === "summary";
           return (
-            <span
-              key={phase.id}
-              className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${
-                isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}. {phase.sublabel}
-            </span>
-            <span className="text-xs text-muted-foreground">/ 100</span>
-          </div>
-        </div>
+            <div key={phase.id} className="flex items-center gap-1">
+              <span
+                className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap ${
+                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {i + 1}. {phase.sublabel}
+              </span>
+              <span className="text-xs text-muted-foreground">/ 100</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 md:p-8">
