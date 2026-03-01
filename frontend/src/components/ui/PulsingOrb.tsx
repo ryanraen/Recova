@@ -68,12 +68,16 @@ const PulsingOrb = ({
   mode = "idle",
   size = "md",
   className,
+  connected = true,
 }: {
   mode: OrbMode;
   size?: OrbSize;
   className?: string;
+  connected?: boolean;
 }) => {
   const sizes = sizeConfig[size];
+  const shouldAnimate = connected && mode === "talking";
+  const showRipples = shouldAnimate;
   return (
     <div
       className={cn(
@@ -82,7 +86,7 @@ const PulsingOrb = ({
       )}
     >
       <div className="relative flex items-center justify-center">
-        {(mode === "listening" || mode === "talking") && (
+        {showRipples && (
           <>
             <span className={cn(
               "absolute rounded-full border border-orb-rose/30 animate-orb-ripple",
@@ -94,7 +98,7 @@ const PulsingOrb = ({
             )} />
           </>
         )}
-        {mode === "talking" && (
+        {showRipples && (
           <span className={cn(
             "absolute rounded-full border border-orb-pink/10 animate-orb-ripple-slow",
             sizes.ripple.c,
@@ -109,15 +113,14 @@ const PulsingOrb = ({
         <div className={cn(
           "relative rounded-full bg-gradient-to-br from-orb-rose via-orb-pink to-orb-magenta transition-all duration-500",
           sizes.core[mode],
-          mode === "idle"      && "animate-orb-breathe shadow-orb-idle",
-          mode === "listening" && "animate-orb-pulse shadow-orb-listening",
-          mode === "talking"   && "animate-orb-talk shadow-orb-talking"
+          !connected && "border-2 border-red-500/40",
+          shouldAnimate && "animate-orb-talk shadow-orb-talking"
         )}>
           <div className="absolute inset-2 rounded-full bg-gradient-to-br from-white/30 via-orb-rose/20 to-transparent" />
         </div>
       </div>
-      <p className={cn("font-medium tracking-widest uppercase text-orb-rose/80", sizes.label)}>
-        {modeConfig[mode].label}
+      <p className={cn("font-medium tracking-widest uppercase text-orb-rose/80", sizes.label, !connected && "text-red-400")}>
+        {connected ? modeConfig[mode].label : "Disconnected"}
       </p>
     </div>
   );

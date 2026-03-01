@@ -82,10 +82,15 @@ export function useVapi() {
     setIsMuted(next);
   }, []);
 
-  const speak = useCallback((message: string) => {
-    if (!message.trim()) return;
-    vapiRef.current?.say(message);
-  }, []);
+  const canSpeak = callState === "active" || callState === "listening" || callState === "speaking";
+  const speak = useCallback(
+    (message: string) => {
+      if (!message.trim()) return;
+      if (!canSpeak) return;
+      vapiRef.current?.say(message);
+    },
+    [canSpeak],
+  );
 
   return {
     orbMode: STATE_TO_MODE[callState],  // ← plug directly into <PulsingOrb mode={orbMode} />
@@ -95,6 +100,7 @@ export function useVapi() {
     error,
     isMuted,
     isActive: callState !== "idle",
+    isConnected: canSpeak,
     startCall,
     assistantIdDefault: VAPI_ASSISTANT_ID,
     assistantIdBackpain: VAPI_ASSISTANT_ID_BACKPAIN,

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PulsingOrb from "@/components/ui/PulsingOrb";
 import { useVapi } from "@/hooks/useVapi";
+import { generateGeminiText } from "@/lib/gemini";
 import { fromMediaPipePose } from "@/posture/integration/mediapipeAdapter";
 import { usePostureMonitor } from "@/posture/react/usePostureMonitor";
 import type { ExerciseType } from "@/posture/types";
@@ -24,11 +25,21 @@ import {
   ChevronRight,
   TrendingUp,
   AlertTriangle,
-  Award,
   ArrowRight,
 } from "lucide-react";
+import botAvatar from "@/assets/pfpPic.png";
 
 type Phase = "interview" | "movement" | "summary";
+type MovementExerciseSnapshot = {
+  exercise: ExerciseType;
+  score: number;
+  status: "good" | "adjust" | "bad";
+  issues: string[];
+};
+type MovementSummary = {
+  averageScore: number;
+  exercises: MovementExerciseSnapshot[];
+};
 
 const phases = [
   { id: "interview" as Phase, label: "Interview", sublabel: "Initial Check" },
@@ -71,8 +82,6 @@ const MOVEMENT_EXERCISES: ExerciseType[] = [
   "squat",
   "forwardExtension",
   "backExtension",
-  "plank",
-  "bridge",
 ];
 
 const EXERCISE_LABELS: Record<ExerciseType, string> = {
@@ -92,6 +101,7 @@ const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
   const [hasVoiceHandoff, setHasVoiceHandoff] = useState(false);
   const [hasSummaryHandoff, setHasSummaryHandoff] = useState(false);
+  const [movementSummary, setMovementSummary] = useState<MovementSummary | null>(null);
   const vapi = useVapi();
   const activeAssistantRef = useRef<string | null>(null);
   const requestedAssistantRef = useRef<string | null>(null);
@@ -106,9 +116,19 @@ const Session = () => {
     const targetAssistant =
       currentPhase === "interview"
         ? vapi.assistantIdDefault
-        : vapi.assistantIdBackpain;
+        : currentPhase === "movement"
+          ? vapi.assistantIdBackpain
+          : null;
 
-    if (!targetAssistant) return;
+    if (!targetAssistant) {
+      if (activeAssistantRef.current) {
+        vapi.endCall();
+        activeAssistantRef.current = null;
+        requestedAssistantRef.current = null;
+        isSwitchingAssistantRef.current = false;
+      }
+      return;
+    }
     if (activeAssistantRef.current === targetAssistant) return;
     if (requestedAssistantRef.current === targetAssistant) return;
     if (isSwitchingAssistantRef.current) return;
@@ -230,9 +250,19 @@ const Session = () => {
         </Button>
       </div>
 
-      {currentPhase === "interview" && <InterviewPhase vapi={vapi} />}
-      {currentPhase === "movement" && <MovementPhase vapi={vapi} />}
-      {currentPhase === "summary" && <SummaryPhase />}
+      {currentPhase === "interview" && (
+        <InterviewPhase vapi={vapi} assistantId={vapi.assistantIdDefault} />
+      )}
+      {currentPhase === "movement" && (
+        <MovementPhase
+          vapi={vapi}
+          assistantId={vapi.assistantIdBackpain}
+          onSummaryReady={setMovementSummary}
+        />
+      )}
+      {currentPhase === "summary" && (
+        <SummaryPhase summary={movementSummary} />
+      )}
     </div>
   );
 };
@@ -292,14 +322,17 @@ const PhaseIndicator = ({ current }: { current: Phase }) => (
 
 const InterviewPhase = ({
   vapi,
+  assistantId,
 }: {
   vapi: ReturnType<typeof useVapi>;
+  assistantId?: string;
 }) => {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const smoothedPoseRef = useRef<NormalizedLandmark[] | null>(null);
@@ -454,6 +487,12 @@ const InterviewPhase = ({
       : needsFullBody
         ? "Keep at least one full body side visible to the camera."
         : null;
+
+  useEffect(() => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [vapi.transcript.length, chatMessages.length]);
   const transcriptMessages = vapi.transcript
     .filter((entry) => typeof entry.text === "string" && entry.text.trim().length > 0)
     .map((entry) => ({
@@ -520,11 +559,15 @@ const InterviewPhase = ({
       <div className="w-full md:w-80 border-t-2 md:border-t-0 md:border-l-2 border-border bg-card flex flex-col max-h-[40vh] md:max-h-none">
         <div className="p-3 md:p-4 border-b border-border bg-sage-light/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-terracotta-light flex items-center justify-center border border-terracotta/20">
-              <Award className="w-5 h-5 text-terracotta" />
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-terracotta/20 bg-terracotta-light">
+              <img
+                src={botAvatar}
+                alt="Dr. AI Coach"
+                className="h-full w-full object-cover"
+              />
             </div>
             <div>
-              <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
+              <p className="font-bold text-foreground text-sm">Dr. Hyde</p>
               <p className="text-xs text-success flex items-center gap-1 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
                 {vapi.isActive ? "Session Live" : "Connecting"}
@@ -533,21 +576,30 @@ const InterviewPhase = ({
           </div>
           <div className="mt-4 flex flex-col items-center gap-3">
             <div className="w-full flex justify-center">
-              <PulsingOrb mode={vapi.orbMode} size="sm" className="py-2" />
+              <PulsingOrb
+                mode={vapi.isConnected ? vapi.orbMode : "idle"}
+                size="sm"
+                className="py-2"
+                connected={vapi.isConnected}
+              />
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="hero-outline"
                 size="sm"
-                onClick={vapi.endCall}
+                onClick={() =>
+                  vapi.isActive
+                    ? vapi.endCall()
+                    : assistantId && vapi.startCall(assistantId)
+                }
               >
-                Stop Call
+                {vapi.isActive ? "Stop Call" : "Start Call"}
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4" ref={chatScrollRef}>
           {transcriptMessages.length === 0 ? (
             <div className="rounded-xl border border-border bg-muted p-3">
               <p className="text-sm text-muted-foreground">
@@ -606,8 +658,12 @@ const InterviewPhase = ({
 
 const MovementPhase = ({
   vapi,
+  assistantId,
+  onSummaryReady,
 }: {
   vapi: ReturnType<typeof useVapi>;
+  assistantId?: string;
+  onSummaryReady: (summary: MovementSummary) => void;
 }) => {
   const [running, setRunning] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
@@ -626,6 +682,9 @@ const MovementPhase = ({
   const lastTransitionAtRef = useRef(0);
   const lastExerciseAnnouncedRef = useRef<number | null>(null);
   const successPopupTimerRef = useRef<number | null>(null);
+  const exerciseSnapshotsRef = useRef<Map<ExerciseType, MovementExerciseSnapshot>>(
+    new Map(),
+  );
 
   const currentExercise = MOVEMENT_EXERCISES[exerciseIndex];
   const currentExerciseLabel = EXERCISE_LABELS[currentExercise];
@@ -852,6 +911,28 @@ const MovementPhase = ({
     vapi.speak,
   ]);
 
+  useEffect(() => {
+    const latest = posture.latestResult;
+    if (!latest) return;
+    const issues = latest.issues.map((item) => item.message);
+    exerciseSnapshotsRef.current.set(currentExercise, {
+      exercise: currentExercise,
+      score: Math.round((latest.score ?? 0) * 100),
+      status: latest.status ?? "adjust",
+      issues,
+    });
+  }, [posture.latestResult, currentExercise]);
+
+  useEffect(() => {
+    if (!isRoutineComplete) return;
+    const snapshots = Array.from(exerciseSnapshotsRef.current.values());
+    if (snapshots.length === 0) return;
+    const averageScore = Math.round(
+      snapshots.reduce((sum, item) => sum + item.score, 0) / snapshots.length,
+    );
+    onSummaryReady({ averageScore, exercises: snapshots });
+  }, [isRoutineComplete, onSummaryReady]);
+
   const score = Math.round((posture.latestResult?.score ?? 0) * 100);
   const scoreBreakdown = useMemo(
     () => createScoreBreakdown(posture.latestResult?.metrics ?? {}, score),
@@ -935,11 +1016,15 @@ const MovementPhase = ({
       <div className="w-full md:w-96 md:self-stretch border-t-2 md:border-t-0 md:border-l-2 border-border bg-card p-4 md:p-5">
         <div className="mb-4 rounded-lg border border-border bg-sage-light/30 p-3 md:p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-terracotta-light flex items-center justify-center border border-terracotta/20">
-              <Award className="w-5 h-5 text-terracotta" />
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-terracotta/20 bg-terracotta-light">
+              <img
+                src={botAvatar}
+                alt="Dr. AI Coach"
+                className="h-full w-full object-cover"
+              />
             </div>
             <div>
-              <p className="font-bold text-foreground text-sm">Dr. AI Coach</p>
+              <p className="font-bold text-foreground text-sm">Dr. Hyde</p>
               <p className="text-xs text-success flex items-center gap-1 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />{" "}
                 {vapi.isActive ? "Session Live" : "Connecting"}
@@ -948,16 +1033,25 @@ const MovementPhase = ({
           </div>
 
           <div className="mt-4 flex flex-col items-center gap-3">
-            <PulsingOrb mode={vapi.orbMode} size="xs" className="py-1" />
-            <div className="flex items-center gap-2">
-              <Button
-                variant="hero-outline"
-                size="sm"
-                onClick={vapi.endCall}
-              >
-                Stop Call
-              </Button>
-            </div>
+            <PulsingOrb
+              mode={vapi.isConnected ? vapi.orbMode : "idle"}
+              size="xs"
+              className="py-1"
+              connected={vapi.isConnected}
+            />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="hero-outline"
+              size="sm"
+              onClick={() =>
+                vapi.isActive
+                  ? vapi.endCall()
+                  : assistantId && vapi.startCall(assistantId)
+              }
+            >
+              {vapi.isActive ? "Stop Call" : "Start Call"}
+            </Button>
+          </div>
           </div>
         </div>
         <h3 className="font-serif text-lg text-foreground mb-3">Posture Score</h3>
@@ -1085,8 +1179,84 @@ function isAssistantRole(role: unknown): boolean {
   return value === "assistant" || value === "bot" || value === "ai";
 }
 
-const SummaryPhase = () => (
-  <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
+const SummaryPhase = ({ summary }: { summary: MovementSummary | null }) => {
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [planText, setPlanText] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
+
+  useEffect(() => {
+    if (!summary) return;
+    let cancelled = false;
+    const run = async () => {
+      setIsLoading(true);
+      setAiError(null);
+      try {
+        const prompt = [
+          "You are a physiotherapy assistant. Analyze the posture screening summary and generate:",
+          "1) Strengths (2-3 short bullets)",
+          "2) Areas to improve (2-3 short bullets)",
+          "3) A short recovery plan paragraph (2-4 sentences)",
+          "",
+          "Keep it concise, supportive, and non-diagnostic.",
+          "",
+          `Average score: ${summary.averageScore}`,
+          "Exercise results:",
+          ...summary.exercises.map((item) => {
+            const issueText = item.issues.length ? item.issues.join("; ") : "No issues flagged.";
+            return `- ${EXERCISE_LABELS[item.exercise]}: score ${item.score}, status ${item.status}, issues: ${issueText}`;
+          }),
+        ].join("\n");
+        const text = await generateGeminiText({ prompt });
+        if (!cancelled) setAiSummary(text);
+      } catch (error) {
+        if (!cancelled) {
+          setAiError(error instanceof Error ? error.message : "Failed to generate summary.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [summary]);
+
+  const handleGeneratePlan = async () => {
+    setShowPlan(true);
+    if (!summary || planText || planLoading) return;
+    setPlanLoading(true);
+    setPlanError(null);
+    try {
+      const prompt = [
+        "You are a physiotherapy assistant. Create a detailed recovery plan based on the posture screening.",
+        "Write it as a clean, structured document with headings and short paragraphs.",
+        "Include: Overview, Key Findings, Daily Mobility Routine, Strength & Stability, Form Cues, and When to Seek Help.",
+        "Keep it safe, supportive, and non-diagnostic.",
+        "",
+        `Average score: ${summary.averageScore}`,
+        "Exercise results:",
+        ...summary.exercises.map((item) => {
+          const issueText = item.issues.length ? item.issues.join('; ') : "No issues flagged.";
+          return `- ${EXERCISE_LABELS[item.exercise]}: score ${item.score}, status ${item.status}, issues: ${issueText}`;
+        }),
+      ].join("\n");
+      const text = await generateGeminiText({ prompt });
+      setPlanText(text);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Failed to generate plan.");
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
     <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
       <PhaseIndicator current="summary" />
     </div>
@@ -1113,7 +1283,9 @@ const SummaryPhase = () => (
         </p>
         <div className="inline-flex items-center justify-center w-28 h-28 rounded-full bg-sage-light border-4 border-sage/30 mx-auto">
           <div className="text-center">
-            <span className="text-4xl font-bold text-foreground block">82</span>
+            <span className="text-4xl font-bold text-foreground block">
+              {summary ? summary.averageScore : "--"}
+            </span>
             <span className="text-xs text-muted-foreground">/ 100</span>
           </div>
         </div>
@@ -1128,19 +1300,22 @@ const SummaryPhase = () => (
             <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
               <Check className="w-4 h-4 text-success" />
             </div>
-            What you did well
+            Summary
           </h3>
-          <ul className="space-y-3">
-            {strengths.map((s, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 text-sm text-foreground"
-              >
-                <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                {s}
-              </li>
-            ))}
-          </ul>
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Generating summary...</p>
+          )}
+          {aiError && (
+            <p className="text-sm text-destructive">{aiError}</p>
+          )}
+          {!isLoading && !aiError && aiSummary && (
+            <p className="text-sm text-foreground whitespace-pre-line">{aiSummary}</p>
+          )}
+          {!summary && !isLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your summary.
+            </p>
+          )}
         </div>
 
         <div className="bg-amber-soft-light rounded-2xl p-5 md:p-6 border-2 border-amber-soft/25 shadow-sm">
@@ -1148,26 +1323,31 @@ const SummaryPhase = () => (
             <div className="w-8 h-8 rounded-full bg-amber-soft/20 flex items-center justify-center">
               <AlertTriangle className="w-4 h-4 text-amber-soft" />
             </div>
-            Areas to improve
+            Recovery Plan
           </h3>
-          <ul className="space-y-3">
-            {improvements.map((s, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 text-sm text-foreground"
-              >
-                <ArrowRight className="w-4 h-4 text-amber-soft shrink-0 mt-0.5" />
-                {s}
-              </li>
-            ))}
-          </ul>
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+          )}
+          {aiError && (
+            <p className="text-sm text-destructive">{aiError}</p>
+          )}
+          {!isLoading && !aiError && aiSummary && (
+            <p className="text-sm text-foreground whitespace-pre-line">
+              {aiSummary}
+            </p>
+          )}
+          {!summary && !isLoading && (
+            <p className="text-sm text-muted-foreground">
+              Complete the movement assessment to generate your recovery plan.
+            </p>
+          )}
         </div>
       </div>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-          <Button variant="hero" size="lg">
-            View Recovery Plan
-          </Button>
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+        <Button variant="hero" size="lg" onClick={handleGeneratePlan}>
+          View Recovery Plan
+        </Button>
           <Link to="/">
             <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
               Return Home
@@ -1175,8 +1355,43 @@ const SummaryPhase = () => (
           </Link>
         </div>
       </div>
+
+      {showPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
+              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
+                Close
+              </Button>
+            </div>
+            {planLoading && (
+              <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
+            )}
+            {planError && (
+              <p className="text-sm text-destructive">{planError}</p>
+            )}
+            {!planLoading && !planError && planText && (
+              <div className="text-sm text-foreground whitespace-pre-line leading-relaxed">
+                {planText}
+              </div>
+            )}
+            {!summary && !planLoading && !planError && (
+              <p className="text-sm text-muted-foreground">
+                Complete the movement assessment to generate your recovery plan.
+              </p>
+            )}
+            <div className="mt-6 flex justify-end">
+              <Button variant="hero-outline" size="sm" onClick={() => window.print()}>
+                Print
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   </div>
 );
+};
 
 export default Session;
