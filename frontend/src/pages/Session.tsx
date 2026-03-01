@@ -674,6 +674,7 @@ const MovementPhase = ({
   const lastExerciseAnnouncedRef = useRef<number | null>(null);
   const successPopupHoldTimerRef = useRef<number | null>(null);
   const successPopupFadeTimerRef = useRef<number | null>(null);
+  const completionTimerRef = useRef<number | null>(null);
   const exerciseSnapshotsRef = useRef<Map<ExerciseType, MovementExerciseSnapshot>>(
     new Map(),
   );
@@ -725,6 +726,10 @@ const MovementPhase = ({
   useEffect(() => {
     return () => {
       clearSuccessPopup();
+      if (completionTimerRef.current !== null) {
+        window.clearTimeout(completionTimerRef.current);
+        completionTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -904,9 +909,15 @@ const MovementPhase = ({
         } else {
           setIsRoutineComplete(true);
           const completionMessage =
-            "Excellent work. You completed all exercises in this movement session.";
-          showSuccessPopup("Excellent work. Routine complete.");
+            "Excellent work. You completed all exercises in this movement session. Session close.";
+          showSuccessPopup("Session close. Preparing summary.");
           if (vapi.isActive) vapi.speak(completionMessage);
+          if (completionTimerRef.current !== null) {
+            window.clearTimeout(completionTimerRef.current);
+          }
+          completionTimerRef.current = window.setTimeout(() => {
+            onComplete();
+          }, 3500);
         }
       }
       return;
@@ -949,7 +960,6 @@ const MovementPhase = ({
       snapshots.reduce((sum, item) => sum + item.score, 0) / snapshots.length,
     );
     onSummaryReady({ averageScore, exercises: snapshots });
-    onComplete();
   }, [isRoutineComplete, onSummaryReady]);
 
   const score = Math.round((posture.latestResult?.score ?? 0) * 100);
@@ -1211,8 +1221,8 @@ const SummaryPhase = ({ summary }: { summary: MovementSummary | null }) => {
   const [planText, setPlanText] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
-  const [showPlan, setShowPlan] = useState(false);
   const [planPdfUrl, setPlanPdfUrl] = useState<string | null>(null);
+  const pdfFrameRef = useRef<HTMLIFrameElement | null>(null);
 
   useEffect(() => {
     if (!summary) return;
@@ -1254,7 +1264,6 @@ const SummaryPhase = ({ summary }: { summary: MovementSummary | null }) => {
   }, [summary]);
 
   const handleGeneratePlan = async () => {
-    setShowPlan(true);
     if (!summary || planText || planLoading) return;
     setPlanLoading(true);
     setPlanError(null);
@@ -1408,6 +1417,11 @@ ${JSON.stringify(
     }
   }, [planText]);
 
+  useEffect(() => {
+    if (!summary) return;
+    handleGeneratePlan();
+  }, [summary]);
+
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-65px)]">
     <div className="hidden md:flex w-56 border-r-2 border-border bg-card flex-col">
@@ -1447,111 +1461,47 @@ ${JSON.stringify(
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-5 md:gap-6">
-        <div className="bg-success-light rounded-2xl p-5 md:p-6 border-2 border-success/25 shadow-sm">
-          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
-              <Check className="w-4 h-4 text-success" />
-            </div>
-            Summary
-          </h3>
-          {isLoading && (
-            <p className="text-sm text-muted-foreground">Generating summary...</p>
-          )}
-          {aiError && (
-            <p className="text-sm text-destructive">{aiError}</p>
-          )}
-          {!isLoading && !aiError && aiSummary && (
-            <p className="text-sm text-foreground whitespace-pre-line">{aiSummary}</p>
-          )}
-          {!summary && !isLoading && (
+      {!summary && !isLoading ? (
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm text-center">
+          <p className="text-sm text-muted-foreground">
+            Complete the movement assessment to generate your recovery plan.
+          </p>
+        </div>
+      ) : planPdfUrl ? (
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+          <iframe
+            title="Recovery Plan PDF"
+            src={planPdfUrl}
+            ref={pdfFrameRef}
+            className="w-full h-[65vh] rounded-lg border border-border"
+          />
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl p-8 border border-border shadow-sm text-center space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-full border-4 border-sage/30 border-t-sage animate-spin" />
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-foreground">
+              Preparing your recovery plan
+            </p>
             <p className="text-sm text-muted-foreground">
-              Complete the movement assessment to generate your summary.
+              We’re analyzing your movement data and generating a personalized plan.
             </p>
-          )}
-        </div>
-
-        <div className="bg-amber-soft-light rounded-2xl p-5 md:p-6 border-2 border-amber-soft/25 shadow-sm">
-          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-soft/20 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-amber-soft" />
-            </div>
-            Recovery Plan
-          </h3>
-          {isLoading && (
-            <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
-          )}
-          {aiError && (
-            <p className="text-sm text-destructive">{aiError}</p>
-          )}
-          {!isLoading && !aiError && aiSummary && (
-            <p className="text-sm text-foreground whitespace-pre-line">
-              {aiSummary}
-            </p>
-          )}
-          {!summary && !isLoading && (
-            <p className="text-sm text-muted-foreground">
-              Complete the movement assessment to generate your recovery plan.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-        <Button variant="hero" size="lg" onClick={handleGeneratePlan}>
-          View Recovery Plan
-        </Button>
-          <Link to="/">
-            <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
-              Return Home
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {showPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
-              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
-                Close
-              </Button>
-            </div>
-            <div className="px-6 py-4 overflow-y-auto">
-              {planLoading && (
-                <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
-              )}
-              {planError && (
-                <p className="text-sm text-destructive">{planError}</p>
-              )}
-              {!planLoading && !planError && planPdfUrl && (
-                <iframe
-                  title="Recovery Plan PDF"
-                  src={planPdfUrl}
-                  className="w-full h-[65vh] rounded-lg border border-border"
-                />
-              )}
-              {!planLoading && !planError && planText && !planPdfUrl && (
-                <div className="text-sm text-foreground whitespace-pre-line leading-relaxed">
-                  {planText}
-                </div>
-              )}
-              {!summary && !planLoading && !planError && (
-                <p className="text-sm text-muted-foreground">
-                  Complete the movement assessment to generate your recovery plan.
-                </p>
-              )}
-            </div>
-            <div className="mt-auto px-6 py-4 border-t border-border flex justify-end">
-              <Button variant="hero-outline" size="sm" onClick={() => window.print()}>
-                Print
-              </Button>
-            </div>
           </div>
+          {planError && (
+            <p className="text-sm text-destructive">{planError}</p>
+          )}
         </div>
       )}
+
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+        <Link to="/">
+          <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+            Return Home
+          </Button>
+        </Link>
+      </div>
     </div>
+  </div>
   </div>
 );
 };
