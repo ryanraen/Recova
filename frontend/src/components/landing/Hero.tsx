@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Star, Play, Check, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TiltableCard from "@/components/ui/TiltableCard";
+import ShinyText from "@/components/ui/ShinyText";
 import meditationLandingImg from "@/assets/meditation_landing.png";
 
 const Hero = () => {
@@ -25,9 +26,16 @@ const Hero = () => {
             with{" "}
             <span className="inline-flex items-center gap-2 text-primary bg-sage-light px-4 py-2 rounded-xl">
               <div className="w-8 h-8 bg-sage rounded-full flex items-center justify-center">
-                <Leaf className="w-4 h-4 text-white" />
+                <Leaf className="w-4 h-4 text-black" />
               </div>
-              Recova
+              <ShinyText 
+                text="Recova" 
+                className="font-['Instrument_Serif']" 
+                color="#3d3d3d"
+                shineColor="#8fbc94"
+                speed={2.5}
+                spread={100}
+              />
             </span>
           </h2>
 
