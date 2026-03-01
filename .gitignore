@@ -4,3 +4,10 @@ dist/
 coverage/
 .vite/
 *.tsbuildinfo
+
+node_modules
+.env
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
