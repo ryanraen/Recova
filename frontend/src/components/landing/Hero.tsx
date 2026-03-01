@@ -4,40 +4,40 @@ import { Button } from "@/components/ui/button";
 
 const Hero = () => {
   return (
-    <section className="w-full px-6 md:px-12 py-12 md:py-20 lg:py-24 min-h-[90vh] flex items-center relative overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+    <section className="w-full px-8 md:px-16 lg:px-20 py-20 md:py-28 lg:py-36 min-h-screen flex items-center relative overflow-hidden">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-14 lg:gap-24 w-full">
         {/* Left content */}
-        <div className="flex-1 space-y-7">
-          <div className="inline-flex items-center gap-2 bg-sage-light text-foreground px-4 py-2.5 rounded-full text-sm font-semibold">
-            <div className="w-2 h-2 rounded-full bg-sage" />
+        <div className="flex-1 space-y-10">
+          <div className="inline-flex items-center gap-3 bg-sage-light text-foreground px-6 py-3.5 rounded-full text-lg font-semibold">
+            <div className="w-3 h-3 rounded-full bg-sage" />
             AI-Powered Rehabilitation v2.0
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif leading-normal pb-2 bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
             Master Every Movement Analysis
           </h1>
-          <h2 className="text-2xl md:text-3xl font-sans font-bold text-foreground">
-            with <span className="text-primary bg-sage-light px-3 py-1 rounded-lg">Rehabify</span>
+          <h2 className="text-4xl md:text-5xl font-sans font-bold text-foreground">
+            with <span className="text-primary bg-sage-light px-5 py-2.5 rounded-xl">Rehabify</span>
           </h2>
 
-          <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+          <p className="text-2xl text-muted-foreground max-w-2xl leading-relaxed">
             Personalized physiotherapy rehabilitation with structured exercise assessment and real-time movement feedback for accelerated recovery.
           </p>
 
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-sage" />
+          <div className="flex flex-wrap gap-10 text-lg">
+            <div className="flex items-center gap-3">
+              <Star className="w-7 h-7 text-sage" />
               <span className="font-medium text-foreground">Computer Vision</span>
             </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3">
+              <svg className="w-7 h-7 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
                 <path d="M9 3v18M15 3v18M3 9h18M3 15h18" strokeWidth="2" />
               </svg>
               <span className="font-medium text-foreground">ROM Analysis</span>
             </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3">
+              <svg className="w-7 h-7 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -45,18 +45,18 @@ const Hero = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-6 pt-4">
             <Link to="/session">
-              <Button variant="default" size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold rounded-full">
+              <Button variant="default" size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold rounded-full px-10 py-7 text-xl">
                 Begin Self-Assessment
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="bg-white border-2 border-border hover:bg-accent font-semibold rounded-full">
-              <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center mr-1">
-                <Play className="w-3 h-3 text-white fill-white" />
+            <Button variant="outline" size="lg" className="bg-white border-2 border-border hover:bg-accent font-semibold rounded-full px-10 py-7 text-xl">
+              <div className="w-8 h-8 rounded-full bg-sage flex items-center justify-center mr-3">
+                <Play className="w-4 h-4 text-white fill-white" />
               </div>
               Platform Demo
             </Button>
