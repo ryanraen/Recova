@@ -73,9 +73,11 @@ const Journey = () => {
                 } stagger-${index + 1} ${timelineVisible ? 'is-visible' : ''}`}
               >
                 {/* Icon in center */}
-                <div className={`absolute left-1/2 -translate-x-1/2 z-10 hidden md:flex animate-scale-in stagger-${index + 1} ${timelineVisible ? 'is-visible' : ''}`}>
-                  <div className="w-14 h-14 bg-sage rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-sage/20">
-                    <step.icon className="w-6 h-6 text-white" />
+                <div className="absolute left-1/2 -translate-x-1/2 inset-y-0 my-auto h-fit z-10 hidden md:flex">
+                  <div className={`animate-scale-in stagger-${index + 1} ${timelineVisible ? 'is-visible' : ''}`}>
+                    <div className="w-14 h-14 bg-sage rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-sage/20">
+                      <step.icon className="w-6 h-6 text-white" />
+                    </div>
                   </div>
                 </div>
 

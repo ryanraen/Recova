@@ -119,8 +119,8 @@ const Footer = () => {
                   readOnly
                 />
               </div>
-              <button className="w-10 h-10 rounded-full bg-terracotta flex items-center justify-center shrink-0 hover:bg-terracotta/90 transition-colors">
-                <ArrowRight className="w-4 h-4 text-terracotta-foreground" />
+              <button className="w-10 h-10 rounded-full bg-sage flex items-center justify-center shrink-0 hover:bg-sage/90 transition-colors">
+                <ArrowRight className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>

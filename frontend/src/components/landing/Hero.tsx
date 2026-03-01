@@ -1,44 +1,47 @@
 import { Link } from "react-router-dom";
-import { Star, Play, Check } from "lucide-react";
+import { Star, Play, Check, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import meditationLandingImg from "@/assets/meditation_landing.png";
 
 const Hero = () => {
   return (
-    <section className="w-full px-8 md:px-16 lg:px-20 py-20 md:py-28 lg:py-36 min-h-screen flex items-center relative overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-14 lg:gap-24 w-full">
+    <section className="w-full px-6 md:px-12 lg:px-16 py-16 md:py-24 lg:py-28 min-h-screen flex items-center relative overflow-hidden">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20 w-full">
         {/* Left content */}
-        <div className="flex-1 space-y-10">
-          <div className="inline-flex items-center gap-3 bg-sage-light text-foreground px-6 py-3.5 rounded-full text-lg font-semibold">
-            <div className="w-3 h-3 rounded-full bg-sage" />
+        <div className="flex-1 space-y-7">
+          <div className="inline-flex items-center gap-2 bg-sage-light text-foreground px-5 py-3 rounded-full text-base font-semibold">
+            <div className="w-2.5 h-2.5 rounded-full bg-sage" />
             AI-Powered Rehabilitation v2.0
           </div>
 
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif leading-normal pb-2 bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif leading-tight pb-1 bg-gradient-to-r from-foreground via-primary to-sage bg-clip-text text-transparent">
             Healing made personal & precise
           </h1>
-          <h2 className="text-4xl md:text-5xl font-sans font-bold text-foreground">
+          <h2 className="text-3xl md:text-4xl font-sans font-bold text-foreground flex items-center gap-3 flex-wrap">
             with{" "}
-            <span className="text-primary bg-sage-light px-5 py-2.5 rounded-xl">
+            <span className="inline-flex items-center gap-2 text-primary bg-sage-light px-4 py-2 rounded-xl">
+              <div className="w-8 h-8 bg-sage rounded-full flex items-center justify-center">
+                <Leaf className="w-4 h-4 text-white" />
+              </div>
               Rehabify
             </span>
           </h2>
 
-          <p className="text-2xl text-muted-foreground max-w-2xl leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
             Personalized physiotherapy rehabilitation with structured exercise
             assessment and real-time movement feedback for accelerated recovery.
           </p>
 
-          <div className="flex flex-wrap gap-10 text-lg">
-            <div className="flex items-center gap-3">
-              <Star className="w-7 h-7 text-sage" />
+          <div className="flex flex-wrap gap-8 text-base">
+            <div className="flex items-center gap-2">
+              <Star className="w-6 h-6 text-sage" />
               <span className="font-medium text-foreground">
                 Computer Vision
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <svg
-                className="w-7 h-7 text-sage"
+                className="w-6 h-6 text-sage"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -55,9 +58,9 @@ const Hero = () => {
               </svg>
               <span className="font-medium text-foreground">ROM Analysis</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <svg
-                className="w-7 h-7 text-sage"
+                className="w-6 h-6 text-sage"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -81,16 +84,16 @@ const Hero = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-6 pt-4">
+          <div className="flex flex-wrap gap-5 pt-3">
             <Link to="/session">
               <Button
                 variant="default"
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-white font-semibold rounded-full px-10 py-7 text-xl"
+                className="bg-primary hover:bg-primary/90 text-white font-semibold rounded-full px-8 py-6 text-lg"
               >
                 Begin Self-Assessment
                 <svg
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -107,25 +110,26 @@ const Hero = () => {
             <Button
               variant="outline"
               size="lg"
-              className="bg-white border-2 border-border hover:bg-accent font-semibold rounded-full px-10 py-7 text-xl"
+              className="bg-white border-2 border-border hover:bg-accent font-semibold rounded-full px-8 py-6 text-lg"
             >
-              <div className="w-8 h-8 rounded-full bg-sage flex items-center justify-center mr-3">
-                <Play className="w-4 h-4 text-white fill-white" />
+              <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center mr-2">
+                <Play className="w-3.5 h-3.5 text-white fill-white" />
               </div>
               Platform Demo
             </Button>
           </div>
         </div>
 
-        {/* Right demo card */}
-        <div className="flex-1 max-w-xl w-full">
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-border p-6">
+        {/* Right demo cards */}
+        <div className="flex-1 max-w-lg w-full space-y-5">
+          {/* Live Demo Card */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-border p-6">
             {/* Card Header with dots and LIVE DEMO */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-400" />
-                <div className="w-4 h-4 rounded-full bg-amber-400" />
-                <div className="w-4 h-4 rounded-full bg-green-400" />
+                <div className="w-3.5 h-3.5 rounded-full bg-red-400" />
+                <div className="w-3.5 h-3.5 rounded-full bg-amber-400" />
+                <div className="w-3.5 h-3.5 rounded-full bg-green-400" />
               </div>
               <span className="text-sm font-bold text-muted-foreground tracking-wider uppercase">
                 Live Demo
@@ -133,14 +137,14 @@ const Hero = () => {
             </div>
 
             {/* Main Image with overlay */}
-            <div className="relative rounded-2xl overflow-hidden mb-6">
+            <div className="relative rounded-xl overflow-hidden mb-5">
               <img
                 src={meditationLandingImg}
                 alt="Movement analysis demo"
-                className="w-full h-64 md:h-80 object-cover"
+                className="w-full h-56 object-cover"
               />
               {/* Alignment badge overlay */}
-              <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2.5 flex items-center gap-2 shadow-lg">
+              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-sm font-medium text-foreground">
                   Back alignment:
@@ -155,11 +159,78 @@ const Hero = () => {
                 <h3 className="text-xl font-bold text-foreground">
                   Cobra Stretch
                 </h3>
-                <p className="text-muted-foreground">Lower back relief</p>
+                <p className="text-base text-muted-foreground">Lower back relief</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-sage-light border-2 border-sage flex items-center justify-center">
-                <Check className="w-6 h-6 text-sage" />
+              <div className="w-10 h-10 rounded-full bg-sage flex items-center justify-center">
+                <Check className="w-5 h-5 text-white" />
               </div>
+            </div>
+          </div>
+
+          {/* Movement Analysis Card */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-border">
+            {/* Card Header */}
+            <div className="bg-white p-5 border-b border-border">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <span className="text-base font-bold text-white">PF</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground text-base">Movement Analysis</h3>
+                    <p className="text-sm text-muted-foreground">Live Session • Hip Flexion</p>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-sage flex items-center justify-center">
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-muted rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground mb-1">84°</p>
+                  <p className="text-sm text-muted-foreground font-medium">Current Angle</p>
+                </div>
+                <div className="bg-muted rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-foreground mb-1">92%</p>
+                  <p className="text-sm text-muted-foreground font-medium">Form Accuracy</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Body */}
+            <div className="p-5 space-y-4">
+              {/* Active Track */}
+              <div className="bg-sage-light rounded-xl p-4 border border-sage/20">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-sage flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-foreground text-base mb-0.5">Active Recovery Track</h4>
+                    <p className="text-sm text-muted-foreground">Module 4 of 12 • 15 mins left</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Structured Assessment */}
+              <div className="bg-primary rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="px-3 py-1.5 bg-sage rounded-full shrink-0">
+                    <span className="text-xs font-bold text-primary">REC</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-base mb-0.5">Structured Assessment</h4>
+                    <p className="text-sm text-white/70">Session recording enabled</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* View Report Button */}
+              <button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 rounded-xl transition-colors text-base">
+                View Full Bio-Report
+              </button>
             </div>
           </div>
         </div>

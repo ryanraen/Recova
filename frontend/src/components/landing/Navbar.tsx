@@ -9,10 +9,11 @@ const Navbar = () => {
   return (
     <div className="w-full sticky top-0 z-50 px-4 md:px-8 pt-4">
       <nav className="max-w-6xl mx-auto py-3 px-4 md:px-6 flex items-center justify-between bg-primary rounded-full shadow-lg">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-10 h-10 bg-sage rounded-full flex items-center justify-center">
             <Leaf className="w-5 h-5 text-primary" />
           </div>
+          <span className="text-white font-bold text-lg">Rehabify</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8 lg:gap-10">
