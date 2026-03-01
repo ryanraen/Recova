@@ -4,33 +4,33 @@ import useScrollAnimation from "@/hooks/useScrollAnimation";
 const steps = [
   {
     number: "01",
-    title: "Create Your Profile",
+    title: "Quick Interview & Setup",
     description:
-      "Sign up and enter your injury details and mobility restrictions. Your preferences are saved for easy access.",
+      "Answer a few questions about your injury and goals. We check your camera and tools to ensure everything is ready.",
     icon: ClipboardList,
     position: "left",
   },
   {
     number: "02",
-    title: "Set Your Filters",
+    title: "Movement Assessment",
     description:
-      "Choose your recovery goals and time commitment. Add any additional filters like exercise intensity or focus areas.",
+      "Perform guided exercises while our AI analyzes your form and mobility in real time. No wearables required.",
     icon: Target,
     position: "right",
   },
   {
     number: "03",
-    title: "Explore the Plan",
+    title: "Instant Feedback",
     description:
-      "Browse exercises on our interactive dashboard. Green indicators show perfect form, amber shows areas to improve.",
+      "Get actionable feedback and visual cues to improve your technique and track progress after each session.",
     icon: Search,
     position: "left",
   },
   {
     number: "04",
-    title: "Start Recovery",
+    title: "Session Summary",
     description:
-      "Begin your personalized rehabilitation journey with real-time AI guidance and progress tracking.",
+      "See a clear summary of your strengths and areas for improvement, so you know exactly where to focus next.",
     icon: Zap,
     position: "right",
   },
