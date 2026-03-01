@@ -184,4 +184,18 @@
   .stagger-4 { transition-delay: 0.6s; }
   .stagger-5 { transition-delay: 0.75s; }
   .stagger-6 { transition-delay: 0.6s; }
+
+  /* Scanning line animation */
+  @keyframes scan {
+    0% {
+      top: -5%;
+    }
+    100% {
+      top: 105%;
+    }
+  }
+
+  .scan-line {
+    animation: scan 2.5s ease-in-out infinite;
+  }
 }
