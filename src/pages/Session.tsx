@@ -1609,173 +1609,49 @@ ${JSON.stringify(
               </p>
             </div>
 
-            {/* Right: Cards */}
-            <div className="flex-1 space-y-4">
-              {/* Performance Summary Card */}
-              <div className="bg-success-light/50 rounded-2xl p-5 md:p-6 border border-success/20 shadow-sm relative">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center flex-shrink-0">
-                      <BarChart3 className="w-5 h-5 text-success" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-foreground mb-1">Performance Summary</h3>
-                      {isLoading && (
-                        <p className="text-sm text-muted-foreground">Generating summary...</p>
-                      )}
-                      {aiError && (
-                        <p className="text-sm text-destructive">{aiError}</p>
-                      )}
-                      {!isLoading && !aiError && aiSummary && (
-                        <MarkdownContent
-                          text={aiSummary}
-                          className="text-sm text-muted-foreground leading-relaxed"
-                        />
-                      )}
-                      {!summary && !isLoading && (
-                        <p className="text-sm text-muted-foreground">
-                          Detailed breakdown of your movement patterns and form analysis.
-                        </p>
-                      )}
-                      {/* Status indicator */}
-                      <div className="flex items-center gap-2 mt-3">
-                        {summary ? (
-                          <>
-                            <Check className="w-4 h-4 text-success" />
-                            <span className="text-sm text-success font-medium">Complete</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/40" />
-                            <span className="text-sm text-muted-foreground">Assessment Needed</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {!summary && (
-                    <Lock className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
-                  )}
-                </div>
-              </div>
-
-              {/* Recovery Plan Card */}
-              <div className="bg-white rounded-2xl p-5 md:p-6 border border-border shadow-sm relative">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-10 h-10 rounded-xl bg-peach/30 flex items-center justify-center flex-shrink-0">
-                      <Plus className="w-5 h-5 text-terracotta" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-foreground mb-1">Recovery Plan</h3>
-                      {planLoading && (
-                        <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
-                      )}
-                      {planError && (
-                        <p className="text-sm text-destructive">{planError}</p>
-                      )}
-                      {!planLoading && !planError && planText && (
-                        <MarkdownContent
-                          text={planText}
-                          maxBlocks={8}
-                          className="text-sm text-muted-foreground leading-relaxed"
-                        />
-                      )}
-                      {!planLoading && !planError && !planText && aiSummary && (
-                        <MarkdownContent
-                          text={
-                            extractRecoverySection(aiSummary) ??
-                            "Custom protocol to optimize your recovery."
-                          }
-                          className="text-sm text-muted-foreground leading-relaxed"
-                        />
-                      )}
-                      {!summary && !planLoading && (
-                        <p className="text-sm text-muted-foreground">
-                          Custom protocol to optimize muscle repair.
-                        </p>
-                      )}
-                      {/* Status indicator */}
-                      <div className="flex items-center gap-2 mt-3">
-                        {planText ? (
-                          <>
-                            <Check className="w-4 h-4 text-success" />
-                            <span className="text-sm text-success font-medium">Plan Ready</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="w-2 h-2 rounded-full bg-amber-soft" />
-                            <span className="text-sm text-amber-soft font-medium">
-                              {summary ? "Generate Plan" : "Unlock Protocol"}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {!planText && (
-                    <Lock className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
-            <Link to="/">
-              <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
-                Return Home
-              </Button>
-            </Link>
-            {summary ? (
-              <Button variant="hero" size="lg" onClick={handleGeneratePlan}>
-                View Recovery Plan
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
-              <Link to="/session">
-                <Button variant="hero" size="lg" className="w-full sm:w-auto">
-                  Start Assessment
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            )}
-          </div>
+      {!summary && !isLoading ? (
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm text-center">
+          <p className="text-sm text-muted-foreground">
+            Complete the movement assessment to generate your recovery plan.
+          </p>
         </div>
-      </div>
-    </div>
-
-      {showPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
-              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
-                Close
-              </Button>
-            </div>
-            <div className="px-6 py-4 overflow-y-auto">
-              {planLoading && (
-                <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
-              )}
-              {planError && (
-                <p className="text-sm text-destructive">{planError}</p>
-              )}
-            </div>
+      ) : planPdfUrl ? (
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+          <iframe
+            title="Recovery Plan PDF"
+            src={planPdfUrl}
+            ref={pdfFrameRef}
+            className="w-full h-[65vh] rounded-lg border border-border"
+          />
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl p-8 border border-border shadow-sm text-center space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-full border-4 border-sage/30 border-t-sage animate-spin" />
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-foreground">
+              Preparing your recovery plan
+            </p>
+            <p className="text-sm text-muted-foreground">
+              We’re analyzing your movement data and generating a personalized plan.
+            </p>
+          </div>
+          {planError && (
+            <p className="text-sm text-destructive">{planError}</p>
           )}
-
-          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-            <Link to="/">
-              <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
-                Return Home
-              </Button>
-            </Link>
-          </div>
         </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+        <Link to="/">
+          <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+            Return Home
+          </Button>
+        </Link>
       </div>
     </div>
-  );
+  </div>
+  </div>
+);
 };
 
 export default Session;
