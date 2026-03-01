@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PulsingOrb from "@/components/ui/PulsingOrb";
 import { useVapi } from "@/hooks/useVapi";
@@ -103,6 +103,7 @@ const SUMMARY_TRIGGER_LINE =
 
 const Session = () => {
   const [currentPhase, setCurrentPhase] = useState<Phase>("interview");
+  const [searchParams] = useSearchParams();
   const [hasVoiceHandoff, setHasVoiceHandoff] = useState(false);
   const [hasSummaryHandoff, setHasSummaryHandoff] = useState(false);
   const [movementSummary, setMovementSummary] = useState<MovementSummary | null>(null);
@@ -115,6 +116,13 @@ const Session = () => {
     if (currentPhase === "interview") setCurrentPhase("movement");
     else if (currentPhase === "movement") setCurrentPhase("summary");
   };
+
+  useEffect(() => {
+    const targetPhase = searchParams.get("phase");
+    if (targetPhase === "movement" && currentPhase !== "movement") {
+      setCurrentPhase("movement");
+    }
+  }, [currentPhase, searchParams]);
 
   useEffect(() => {
     const targetAssistant =
