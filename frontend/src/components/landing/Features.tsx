@@ -45,12 +45,12 @@ const Features = () => {
           <p className="text-sm font-semibold text-sage uppercase tracking-widest mb-3">
             Features
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
             Recovery Reimagined
           </h2>
         </div>
 
-        <div ref={cardsRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div ref={cardsRef} className="grid md:grid-cols-2 gap-8">
           {features.map((feature, index) => (
             <div
               key={feature.title}
