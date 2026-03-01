@@ -113,8 +113,8 @@ const Session = () => {
 const PhaseIndicator = ({ current }: { current: Phase }) => (
   <div className="p-5 md:p-6 space-y-1 flex flex-col h-full">
     <div className="flex items-center gap-2 mb-6">
-      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-        <Leaf className="w-4 h-4 text-primary-foreground" />
+      <div className="w-8 h-8 bg-sage rounded-lg flex items-center justify-center">
+        <Leaf className="w-4 h-4 text-white" />
       </div>
       <span className="font-bold text-foreground font-serif">Rehabify</span>
     </div>

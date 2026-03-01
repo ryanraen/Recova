@@ -3,18 +3,18 @@ import { Leaf, Mail, ArrowRight } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-primary text-primary-foreground">
+    <footer className="w-full bg-sage text-white">
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-14 md:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
+              <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold font-serif">Rehabify</span>
             </Link>
-            <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
+            <p className="text-white/70 text-sm leading-relaxed max-w-xs">
               AI-powered physiotherapy that makes healing personal, precise, and
               accessible from anywhere.
             </p>
@@ -22,14 +22,14 @@ const Footer = () => {
 
           {/* Product */}
           <div>
-            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-primary-foreground/80">
+            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/80">
               Product
             </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="#features"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Methodology
                 </a>
@@ -37,7 +37,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#features"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Exercises
                 </a>
@@ -45,7 +45,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#journey"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Technology
                 </a>
@@ -53,7 +53,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#journey"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Pricing
                 </a>
@@ -63,14 +63,14 @@ const Footer = () => {
 
           {/* Company */}
           <div>
-            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-primary-foreground/80">
+            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/80">
               Company
             </h4>
             <ul className="space-y-3">
               <li>
                 <a
                   href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   About Us
                 </a>
@@ -78,7 +78,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Careers
                 </a>
@@ -86,7 +86,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Blog
                 </a>
@@ -94,7 +94,7 @@ const Footer = () => {
               <li>
                 <a
                   href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+                  className="text-sm text-white/60 hover:text-white transition-colors"
                 >
                   Contact
                 </a>
@@ -104,19 +104,19 @@ const Footer = () => {
 
           {/* Newsletter */}
           <div>
-            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-primary-foreground/80">
+            <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-white/80">
               Stay Updated
             </h4>
-            <p className="text-sm text-primary-foreground/60 mb-4">
+            <p className="text-sm text-white/60 mb-4">
               Get recovery tips and product updates delivered to your inbox.
             </p>
             <div className="flex gap-2">
-              <div className="flex-1 flex items-center gap-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-full px-4 py-2">
-                <Mail className="w-4 h-4 text-primary-foreground/50 shrink-0" />
+              <div className="flex-1 flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2">
+                <Mail className="w-4 h-4 text-white/50 shrink-0" />
                 <input
                   type="email"
                   placeholder="Your email"
-                  className="bg-transparent text-sm outline-none text-primary-foreground placeholder:text-primary-foreground/40 w-full"
+                  className="bg-transparent text-sm outline-none text-white placeholder:text-white/40 w-full"
                   readOnly
                 />
               </div>
@@ -127,26 +127,26 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/15 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-primary-foreground/50">
+        <div className="border-t border-white/15 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/50">
             2026 Rehabify. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a
               href="#"
-              className="text-xs text-primary-foreground/50 hover:text-primary-foreground transition-colors"
+              className="text-xs text-white/50 hover:text-white transition-colors"
             >
               Privacy Policy
             </a>
             <a
               href="#"
-              className="text-xs text-primary-foreground/50 hover:text-primary-foreground transition-colors"
+              className="text-xs text-white/50 hover:text-white transition-colors"
             >
               Terms of Service
             </a>
             <a
               href="#"
-              className="text-xs text-primary-foreground/50 hover:text-primary-foreground transition-colors"
+              className="text-xs text-white/50 hover:text-white transition-colors"
             >
               Accessibility
             </a>
