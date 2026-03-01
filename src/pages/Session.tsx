@@ -1747,39 +1747,54 @@ ${JSON.stringify(
             )}
           </div>
         </div>
+        <p className="text-muted-foreground text-lg">
+          Great effort! Here is your detailed breakdown.
+        </p>
       </div>
-    </div>
 
-      {showPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-border bg-warm-white shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-serif text-foreground">Recovery Plan</h3>
-              <Button variant="hero-outline" size="sm" onClick={() => setShowPlan(false)}>
-                Close
-              </Button>
-            </div>
-            <div className="px-6 py-4 overflow-y-auto">
-              {planLoading && (
-                <p className="text-sm text-muted-foreground">Generating recovery plan...</p>
-              )}
-              {planError && (
-                <p className="text-sm text-destructive">{planError}</p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-            <Link to="/">
-              <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
-                Return Home
-              </Button>
-            </Link>
-          </div>
+      {!summary && !isLoading ? (
+        <div className="bg-card rounded-2xl p-6 border border-border shadow-sm text-center">
+          <p className="text-sm text-muted-foreground">
+            Complete the movement assessment to generate your recovery plan.
+          </p>
         </div>
+      ) : planPdfUrl ? (
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
+          <iframe
+            title="Recovery Plan PDF"
+            src={planPdfUrl}
+            ref={pdfFrameRef}
+            className="w-full h-[65vh] rounded-lg border border-border"
+          />
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl p-8 border border-border shadow-sm text-center space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-full border-4 border-sage/30 border-t-sage animate-spin" />
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-foreground">
+              Preparing your recovery plan
+            </p>
+            <p className="text-sm text-muted-foreground">
+              We’re analyzing your movement data and generating a personalized plan.
+            </p>
+          </div>
+          {planError && (
+            <p className="text-sm text-destructive">{planError}</p>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+        <Link to="/">
+          <Button variant="hero-outline" size="lg" className="w-full sm:w-auto">
+            Return Home
+          </Button>
+        </Link>
       </div>
     </div>
-  );
+  </div>
+  </div>
+);
 };
 
 export default Session;
