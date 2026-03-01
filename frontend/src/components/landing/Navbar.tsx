@@ -1,98 +1,98 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf, ArrowRight, Menu } from "lucide-react";
+import { Menu, Leaf } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <nav className="w-full py-3 px-6 md:px-12 flex items-center justify-between bg-card/95 backdrop-blur-md sticky top-0 z-50 border-b-2 border-border shadow-sm">
-      <Link to="/" className="flex items-center gap-2.5">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-md">
-          <Leaf className="w-5 h-5 text-primary-foreground" />
+    <div className="w-full sticky top-0 z-50 px-4 md:px-8 pt-4">
+      <nav className="max-w-6xl mx-auto py-3 px-4 md:px-6 flex items-center justify-between bg-primary rounded-full shadow-lg">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-sage rounded-full flex items-center justify-center">
+            <Leaf className="w-5 h-5 text-primary" />
+          </div>
+          <span className="text-white font-bold text-lg">Rehabify</span>
+        </Link>
+
+        <div className="hidden md:flex items-center gap-8 lg:gap-10">
+          <a
+            href="#features"
+            className="text-white/90 hover:text-white transition-colors text-sm font-medium"
+          >
+            Platform
+          </a>
+          <a
+            href="#features"
+            className="text-white/90 hover:text-white transition-colors text-sm font-medium"
+          >
+            Assessment
+          </a>
+          <a
+            href="#journey"
+            className="text-white/90 hover:text-white transition-colors text-sm font-medium"
+          >
+            Case Studies
+          </a>
+          <a
+            href="#journey"
+            className="text-white/90 hover:text-white transition-colors text-sm font-medium"
+          >
+            Pricing
+          </a>
         </div>
-        <span className="text-xl font-bold font-serif text-foreground">
-          Rehabify
-        </span>
-      </Link>
 
-      <div className="hidden md:flex items-center gap-8">
-        <a
-          href="#features"
-          className="text-foreground/70 hover:text-foreground transition-colors text-sm font-semibold"
-        >
-          Methodology
-        </a>
-        <a
-          href="#features"
-          className="text-foreground/70 hover:text-foreground transition-colors text-sm font-semibold"
-        >
-          Exercises
-        </a>
-        <a
-          href="#journey"
-          className="text-foreground/70 hover:text-foreground transition-colors text-sm font-semibold"
-        >
-          Technology
-        </a>
-        <a
-          href="#journey"
-          className="text-foreground/70 hover:text-foreground transition-colors text-sm font-semibold"
-        >
-          Pricing
-        </a>
-      </div>
+        <Link to="/session" className="hidden md:block">
+          <Button variant="default" size="sm" className="bg-white text-primary hover:bg-white/90 font-medium rounded-full px-5 py-2 h-auto">
+            Request Demo
+          </Button>
+        </Link>
 
-      <Link to="/session" className="hidden md:block">
-        <Button variant="cta" size="lg">
-          Start Recovery <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </Link>
-
-      {/* Mobile menu button */}
-      <button
-        className="md:hidden p-2"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        <Menu className="w-6 h-6 text-foreground" />
-      </button>
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setMobileOpen(!mobileOpen)}
+        >
+          <Menu className="w-5 h-5 text-white" />
+        </button>
+      </nav>
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="absolute top-full left-0 right-0 bg-card border-b-2 border-border shadow-lg p-6 flex flex-col gap-4 md:hidden">
+        <div className="md:hidden max-w-6xl mx-auto mt-2 bg-primary rounded-2xl shadow-lg p-6 flex flex-col gap-4">
           <a
             href="#features"
-            className="text-foreground font-semibold text-sm py-2"
+            className="text-white font-medium text-sm py-2"
           >
-            Methodology
+            Platform
           </a>
           <a
             href="#features"
-            className="text-foreground font-semibold text-sm py-2"
+            className="text-white font-medium text-sm py-2"
           >
-            Exercises
+            Assessment
           </a>
           <a
             href="#journey"
-            className="text-foreground font-semibold text-sm py-2"
+            className="text-white font-medium text-sm py-2"
           >
-            Technology
+            Case Studies
           </a>
           <a
             href="#journey"
-            className="text-foreground font-semibold text-sm py-2"
+            className="text-white font-medium text-sm py-2"
           >
             Pricing
           </a>
           <Link to="/session">
-            <Button variant="cta" size="lg" className="w-full">
-              Start Recovery <ArrowRight className="w-4 h-4 ml-1" />
+            <Button variant="default" size="default" className="w-full bg-white text-primary hover:bg-white/90 font-medium rounded-full">
+              Request Demo
             </Button>
           </Link>
         </div>
       )}
-    </nav>
+    </div>
   );
 };
 
