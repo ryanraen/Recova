@@ -1,15 +1,15 @@
 
 <p align="center">
   <a href="#" target="_blank" rel="noopener noreferrer">
-    <img src="src/assets/landing.png" alt="Recova App Screenshot" width="1100" />
+    <img src="src/assets/landing.png" alt="Seido App Screenshot" width="1100" />
   </a>
 </p>
 
-<h1 align="center">Recova</h1>
+<h1 align="center">Seido</h1>
 
 <p align="center">
   <b>Mountain Madness 2026 Hackathon Project</b><br/>
-  Team Recova with Jerry, Mike, Ryan.
+  Team Seido with Jerry, Mike, Ryan.
 </p>
 
 <p align="center">
@@ -36,20 +36,20 @@
 
 ## About The Project
 
-Recova is an AI-powered rehabilitation platform designed to make physical therapy and recovery more personal, precise, and engaging. Users can participate in guided movement sessions, receive real-time feedback, and track their progress—all from the comfort of home.
+Seido is an AI-powered rehabilitation platform designed to make physical therapy and recovery more personal, precise, and engaging. Users can participate in guided movement sessions, receive real-time feedback, and track their progress—all from the comfort of home.
 
 ### The Problem
 Physical rehabilitation is often repetitive, hard to track, and lacks personalized feedback. Many patients struggle to stay motivated and perform exercises correctly, which can slow recovery and reduce outcomes.
 
 ### Our Solution
-Recova provides a comprehensive platform where users can:
+Seido provides a comprehensive platform where users can:
 - Join interactive, AI-guided movement sessions
 - Receive instant feedback on posture and exercise quality
 - Track progress and session history
 - Enjoy a beautiful, responsive experience on any device
 
 <p align="center">
-  <img src="src/assets/landing2.png" alt="Recova Features" width="800" />
+  <img src="src/assets/landing2.png" alt="Seido Features" width="800" />
 </p>
 
 ## How It Works
