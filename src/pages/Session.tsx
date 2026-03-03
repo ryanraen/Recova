@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PulsingOrb from "@/components/ui/PulsingOrb";
 import { useVapi } from "@/hooks/useVapi";
+import ApiKeySettings from "@/components/ApiKeySettings";
 import { generateGeminiText } from "@/lib/gemini";
 import jsPDF from "jspdf";
 import { fromMediaPipePose } from "@/posture/integration/mediapipeAdapter";
@@ -347,6 +348,7 @@ const InterviewPhase = ({
 }) => {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [showApiSettings, setShowApiSettings] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -667,6 +669,33 @@ const InterviewPhase = ({
         </div>
 
       </div>
+
+      <div className="fixed bottom-4 right-4 z-[65]">
+        <Button variant="hero-outline" size="sm" onClick={() => setShowApiSettings(true)}>
+          API Settings
+        </Button>
+      </div>
+
+      {showApiSettings && (
+        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-card shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-serif text-foreground">API Settings</h2>
+              <Button variant="hero-outline" size="sm" onClick={() => setShowApiSettings(false)}>
+                Close
+              </Button>
+            </div>
+            <ApiKeySettings
+              onSaved={() => {
+                setShowApiSettings(false);
+                window.location.reload();
+              }}
+              onCancel={() => setShowApiSettings(false)}
+              showCancel
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
