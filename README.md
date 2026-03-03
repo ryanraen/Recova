@@ -70,9 +70,10 @@ Seido provides a comprehensive platform where users can:
 - GSAP for animations
 
 **Backend/Data:**
-- AI-powered posture analysis (MediaPipe integration)
-- Session data and summaries
-- PDF export via jsPDF
+- MediaPipe for posture analysis
+- ElevenLabs + Vapi for voice guidance 
+- Gemini for Session data and summaries
+- jsPDF for PDF export
 
 ## Key Features
 
